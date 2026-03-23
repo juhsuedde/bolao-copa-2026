@@ -198,7 +198,13 @@ export default function Jogos() {
         <ModalPalpite 
           isOpen={isModalOpen} 
           onClose={() => setIsModalOpen(false)} 
-          match={selectedMatch}
+          interface Match {
+            home?: { name: string; flag?: string };
+            away?: { name: string; flag?: string };
+            home_score?: number | null;
+            away_score?: number | null;
+            // ...
+            }
           currentPick={userPicks[selectedMatch.id] || null}
           onSave={handleSavePick}
         />
