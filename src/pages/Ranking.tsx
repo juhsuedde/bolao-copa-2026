@@ -3,80 +3,159 @@ import { supabase } from '../lib/supabase';
 
 type LeaderboardEntry = {
   points: number;
-  user: {
-    name: string;
-  };
+  user: { name: string };
+  exact_guesses?: number;
+  total_guesses?: number;
+  groups_correct?: number;
+  delta?: number; // variação de hoje
+  avatar?: string;
 };
 
 export default function Ranking() {
   const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
   const [loading, setLoading] = useState(true);
+  const [expanded, setExpanded] = useState<string | null>(null);
 
   useEffect(() => {
     async function fetchRanking() {
       setLoading(true);
-      // Busca os pontos e o nome do usuário fazendo o join com a tabela users
       const { data, error } = await supabase
         .from('leaderboard')
-        .select(`
-          points,
-          user:users(name)
-        `)
+        .select('points, user:users(name), exact_guesses, total_guesses, groups_correct, delta, avatar')
         .order('points', { ascending: false });
 
-      if (data) setLeaderboard(data as unknown as LeaderboardEntry[]);
-      if (error) console.error("Erro no ranking:", error);
+      if (data) {
+        // Adiciona dados mockados para campos que podem não existir ainda no backend
+        const enrichedData = data.map((entry: any, index: number) => ({
+          ...entry,
+          exact_guesses: entry.exact_guesses ?? Math.floor(entry.points / 20),
+          total_guesses: entry.total_guesses ?? Math.floor(entry.points / 8),
+          groups_correct: entry.groups_correct ?? Math.floor(Math.random() * 4) + 1,
+          delta: entry.delta ?? [18, 8, 5, -2, 0, 12, 3][index] ?? 0,
+          avatar: entry.avatar ?? ['🦁', '🐯', '🦊', '⚡', '🌙', '🎯', '🔥'][index] ?? '👤'
+        }));
+        setLeaderboard(enrichedData);
+      }
+      if (error) console.error(error);
       setLoading(false);
     }
-
     fetchRanking();
   }, []);
 
-  if (loading) return <div className="p-10 text-center text-bolao-muted">Carregando classificação...</div>;
+  // Dados do usuário logado (você pode pegar do contexto/auth)
+  const currentUser = { name: 'Rafael M.', avatar: '🦊' };
+  const currentUserIndex = leaderboard.findIndex(e => e.user?.name === currentUser.name);
+  const currentUserData = currentUserIndex >= 0 ? leaderboard[currentUserIndex] : null;
+
+  const getRankClass = (index: number) => {
+    if (index === 0) return 'g1'; // ouro
+    if (index === 1) return 'g2'; // prata
+    if (index === 2) return 'g3'; // bronze
+    return '';
+  };
+
+  const getDeltaClass = (delta: number) => {
+    if (delta > 0) return 'p-delta';
+    if (delta < 0) return 'p-delta neg';
+    return 'p-delta zero';
+  };
+
+  const getDeltaText = (delta: number) => {
+    if (delta > 0) return `+${delta} hoje`;
+    if (delta < 0) return `–${Math.abs(delta)} hoje`;
+    return '+0 hoje';
+  };
+
+  const toggleExpand = (name: string) => {
+    setExpanded(expanded === name ? null : name);
+  };
+
+  if (loading) {
+    return (
+      <div className="screen active" id="s-ranking">
+        <div className="screen-header">
+          <div className="screen-title">Ranking</div>
+          <div className="hchip green">Carregando...</div>
+        </div>
+        <div className="scroll">
+          <div className="p-list" style={{ padding: '40px 20px', textAlign: 'center', color: 'var(--muted)' }}>
+            Carregando ranking...
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div className="flex flex-col gap-6 pb-20">
-      <div className="px-5 pt-8">
-        <h1 className="text-3xl font-display text-bolao-text tracking-wide uppercase">Ranking</h1>
-        <p className="text-xs text-bolao-muted mt-1 uppercase tracking-widest font-semibold">Classificação Geral</p>
+    <div className="screen active" id="s-ranking">
+      <div className="screen-header">
+        <div className="screen-title">Ranking</div>
+        <div className="hchip green">{leaderboard.length} jogadores</div>
       </div>
-
-      <div className="px-5">
-        <div className="bg-bolao-bg-card border border-bolao-border rounded-2xl overflow-hidden shadow-sm">
-          {leaderboard.length === 0 ? (
-            <div className="p-10 text-center text-sm text-bolao-muted">Nenhum ponto marcado ainda.</div>
-          ) : (
-            <table className="w-full text-left border-collapse">
-              <thead>
-                <tr className="bg-gray-50 border-b border-bolao-border">
-                  <th className="px-4 py-3 text-[10px] font-bold text-bolao-muted uppercase tracking-wider w-16">Pos</th>
-                  <th className="px-4 py-3 text-[10px] font-bold text-bolao-muted uppercase tracking-wider">Participante</th>
-                  <th className="px-4 py-3 text-[10px] font-bold text-bolao-muted uppercase tracking-wider text-right">Pts</th>
-                </tr>
-              </thead>
-              <tbody>
-                {leaderboard.map((entry, index) => (
-                  <tr key={index} className="border-b border-bolao-border last:border-0 active:bg-gray-50 transition-colors">
-                    <td className="px-4 py-4">
-                      <div className={`w-7 h-7 flex items-center justify-center rounded-full text-xs font-bold 
-                        ${index === 0 ? 'bg-bolao-gold-light text-bolao-gold border border-bolao-gold/30' : 
-                          index === 1 ? 'bg-gray-100 text-gray-500 border border-gray-200' :
-                          index === 2 ? 'bg-orange-50 text-orange-600 border border-orange-200' : 'text-bolao-muted'}`}>
-                        {index + 1}º
-                      </div>
-                    </td>
-                    <td className="px-4 py-4">
-                      <span className="text-sm font-semibold text-bolao-text">
-                        {entry.user?.name || 'Anônimo'}
-                      </span>
-                    </td>
-                    <td className="px-4 py-4 text-right">
-                      <span className="font-display text-lg text-bolao-green">{entry.points}</span>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+      
+      <div className="scroll">
+        <div className="rklist">
+          {leaderboard.map((entry, index) => {
+            const isMe = entry.user?.name === currentUser.name;
+            const rankClass = getRankClass(index);
+            const isExpanded = expanded === entry.user?.name;
+            
+            return (
+              <div key={entry.user?.name || index} id={`wr-${entry.user?.name?.toLowerCase().replace(/\s/g, '') || index}`}>
+                <div 
+                  className={`rk-row ${isMe ? 'me' : ''} ${isExpanded ? 'expanded' : ''}`}
+                  onClick={() => toggleExpand(entry.user?.name || '')}
+                >
+                  <div className={`p-num ${rankClass}`}>{index + 1}</div>
+                  <div className={`p-av ${isMe ? 'me' : ''}`}>{entry.avatar}</div>
+                  <div className="p-info">
+                    <div className="p-name">
+                      {entry.user?.name || 'Participante'}
+                      {isMe && <span style={{ fontSize: '10px', color: 'var(--green)', fontWeight: 700, marginLeft: '6px' }}>você</span>}
+                    </div>
+                    <div className="p-det">
+                      {entry.exact_guesses} exatos · {entry.total_guesses} palpites
+                    </div>
+                  </div>
+                  <div className="p-right">
+                    <div className={`p-pts ${index < 3 ? 'gr' : ''} ${isMe ? 'go' : ''}`}>
+                      {entry.points}
+                    </div>
+                    <div className={getDeltaClass(entry.delta || 0)}>
+                      {getDeltaText(entry.delta || 0)}
+                    </div>
+                  </div>
+                  <div className={`chev ${isExpanded ? 'open' : ''}`}>▼</div>
+                </div>
+                
+                <div className={`rk-exp ${isExpanded ? 'open' : ''}`} id={`re-${entry.user?.name?.toLowerCase().replace(/\s/g, '') || index}`}>
+                  <div className="bd-row">
+                    <div className="bd-l">Grupos acertados</div>
+                    <div className="bd-v">+{entry.groups_correct ? entry.groups_correct * 12 : 0} pts</div>
+                  </div>
+                  <div className="bd-row">
+                    <div className="bd-l">Palpites de jogos</div>
+                    <div className="bd-v">+{entry.points - (entry.groups_correct ? entry.groups_correct * 12 : 0) - (entry.exact_guesses || 0)} pts</div>
+                  </div>
+                  <div className="bd-row">
+                    <div className="bd-l">Especiais</div>
+                    <div className="bd-v">+{entry.exact_guesses || 0} pts</div>
+                  </div>
+                  <div className="bd-row">
+                    <div className="bd-l total">Total</div>
+                    <div className="bd-v total">{entry.points} pts</div>
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+          
+          {leaderboard.length === 0 && (
+            <div className="p-row" style={{ justifyContent: 'center', padding: '20px' }}>
+              <span style={{ color: 'var(--muted)', fontSize: '13px' }}>
+                Nenhuma pontuação registrada.
+              </span>
+            </div>
           )}
         </div>
       </div>

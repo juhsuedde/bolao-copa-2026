@@ -24,3 +24,233 @@
   --radius: 14px;
   --radius-sm: 9px;
 }
+
+/* Header da tela */
+.screen-header {
+  padding: 14px 20px 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-shrink: 0;
+  background: var(--bg);
+}
+
+.screen-title {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 30px;
+  letter-spacing: 1px;
+  line-height: 1;
+}
+
+.hchip {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 4px 10px;
+  border-radius: 20px;
+  letter-spacing: 0.04em;
+}
+
+.hchip.green {
+  background: var(--green-light);
+  border: 1px solid var(--green-mid);
+  color: var(--green);
+}
+
+/* Scroll area */
+.scroll {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding-bottom: 16px;
+}
+
+.scroll::-webkit-scrollbar {
+  display: none;
+}
+
+/* Lista de ranking */
+.rklist {
+  padding: 8px 20px 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+/* Linha do jogador */
+.rk-row {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 11px 13px;
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  cursor: pointer;
+  transition: background 0.12s;
+}
+
+.rk-row:active {
+  background: var(--bg3);
+}
+
+.rk-row.me {
+  border-color: var(--green-mid);
+  background: var(--green-light);
+}
+
+.rk-row.expanded {
+  border-radius: var(--radius-sm) var(--radius-sm) 0 0;
+  border-bottom-color: transparent;
+}
+
+/* Posição */
+.p-num {
+  font-family: 'DM Mono', monospace;
+  font-size: 12px;
+  color: var(--muted);
+  width: 16px;
+  text-align: center;
+  flex-shrink: 0;
+}
+
+.p-num.g1 {
+  color: #9A7008;
+  font-weight: 600;
+}
+
+.p-num.g2 {
+  color: #888;
+  font-weight: 600;
+}
+
+.p-num.g3 {
+  color: #9A5228;
+  font-weight: 600;
+}
+
+/* Avatar */
+.p-av {
+  width: 33px;
+  height: 33px;
+  border-radius: 50%;
+  background: var(--bg3);
+  border: 1.5px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  flex-shrink: 0;
+}
+
+.p-av.me {
+  border-color: var(--green);
+}
+
+/* Info */
+.p-info {
+  flex: 1;
+}
+
+.p-name {
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.p-det {
+  font-size: 10px;
+  color: var(--muted);
+  margin-top: 1px;
+}
+
+/* Pontuação */
+.p-right {
+  text-align: right;
+}
+
+.p-pts {
+  font-family: 'DM Mono', monospace;
+  font-size: 15px;
+  font-weight: 500;
+}
+
+.p-pts.gr {
+  color: var(--green);
+}
+
+.p-pts.go {
+  color: var(--gold);
+}
+
+.p-delta {
+  font-size: 10px;
+  margin-top: 1px;
+}
+
+.p-delta.neg {
+  color: var(--red);
+}
+
+.p-delta.zero {
+  color: var(--muted);
+}
+
+/* Setinha */
+.chev {
+  font-size: 11px;
+  color: var(--muted);
+  transition: transform 0.18s;
+  flex-shrink: 0;
+}
+
+.chev.open {
+  transform: rotate(180deg);
+}
+
+/* Painel expandido */
+.rk-exp {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-top: none;
+  border-radius: 0 0 var(--radius-sm) var(--radius-sm);
+  display: none;
+  overflow: hidden;
+}
+
+.rk-exp.open {
+  display: block;
+}
+
+.bd-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 13px;
+  border-bottom: 1px solid var(--border);
+}
+
+.bd-row:last-child {
+  border-bottom: none;
+}
+
+.bd-l {
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.bd-v {
+  font-family: 'DM Mono', monospace;
+  font-size: 13px;
+  color: var(--green);
+}
+
+.bd-l.total {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.bd-v.total {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text);
+}
