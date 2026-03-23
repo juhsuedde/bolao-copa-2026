@@ -3,17 +3,16 @@ import { AuthProvider, useAuth } from './hooks/useAuth';
 import Login from './pages/Login';
 import BottomNav from './layout/BottomNav';
 import Jogos from './pages/Jogos';
+import Home from './pages/Home';
+import Especiais from './pages/Especiais';
 
-// Páginas temporárias (placeholders) para podermos navegar
-const Home = () => <div className="p-6 mt-10 text-center text-bolao-muted">Página Início em construção</div>;
-const Especiais = () => <div className="p-6 mt-10 text-center text-bolao-muted">Palpites Especiais em construção</div>;
 const Ranking = () => <div className="p-6 mt-10 text-center text-bolao-muted">Ranking em construção</div>;
 
 type Tab = 'home' | 'jogos' | 'especiais' | 'ranking';
 
 function MainApp() {
   const { session, loading } = useAuth();
-  const [currentTab, setCurrentTab] = useState<Tab>('jogos'); // Iniciando na aba Jogos para testarmos
+  const [currentTab, setCurrentTab] = useState<Tab>('home');
 
   if (loading) {
     return <div className="h-screen flex items-center justify-center text-bolao-muted">Carregando...</div>;

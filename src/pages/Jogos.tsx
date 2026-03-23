@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { supabase } from '../lib/supabase';
 import ModalPalpite from '../components/ModalPalpite';
 import { useAuth } from '../hooks/useAuth';
@@ -30,7 +30,7 @@ export default function Jogos() {
   const [isModalOpen, setIsModalOpen] = useState(false);
 
   // Função central para buscar jogos e palpites do utilizador
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     setLoading(true);
     
     // 1. Busca todos os jogos
@@ -67,11 +67,11 @@ export default function Jogos() {
     }
 
     setLoading(false);
-  };
+  }, [user]);
 
   useEffect(() => {
-    fetchData();
-  }, [user]);
+  fetchData();
+}, [fetchData]);
 
   const openModal = (match: Match) => {
     if (!match.locked) {
