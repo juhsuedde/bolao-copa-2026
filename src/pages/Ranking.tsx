@@ -45,7 +45,6 @@ export default function Ranking() {
   // Dados do usuário logado (você pode pegar do contexto/auth)
   const currentUser = { name: 'Rafael M.', avatar: '🦊' };
   const currentUserIndex = leaderboard.findIndex(e => e.user?.name === currentUser.name);
-  const currentUserData = currentUserIndex >= 0 ? leaderboard[currentUserIndex] : null;
 
   const getRankClass = (index: number) => {
     if (index === 0) return 'g1'; // ouro

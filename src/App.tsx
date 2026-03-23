@@ -9,7 +9,7 @@ import BottomNav from './layout/BottomNav';
 
 function AppContent() {
   const { user, loading } = useAuth();
-  const [currentTab, setCurrentTab] = useState('home');
+  const [currentTab, setCurrentTab] = useState<Tab>('home');
 
   if (loading) return <div className="h-screen flex items-center justify-center bg-bolao-bg font-display text-bolao-green">⚽ CARREGANDO...</div>;
   if (!user) return <Login />;
