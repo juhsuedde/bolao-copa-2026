@@ -1,41 +1,34 @@
 import { useState } from 'react';
 import { AuthProvider, useAuth } from './hooks/useAuth';
 import Login from './pages/Login';
-import BottomNav from './layout/BottomNav';
-import Jogos from './pages/Jogos';
 import Home from './pages/Home';
+import Jogos from './pages/Jogos';
 import Especiais from './pages/Especiais';
+import Ranking from './pages/Ranking';
+import BottomNav from './layout/BottomNav';
 
-const Ranking = () => <div className="p-6 mt-10 text-center text-bolao-muted">Ranking em construção</div>;
+function AppContent() {
+  const { user, loading } = useAuth();
+  const [currentTab, setCurrentTab] = useState('home');
 
-type Tab = 'home' | 'jogos' | 'especiais' | 'ranking';
-
-function MainApp() {
-  const { session, loading } = useAuth();
-  const [currentTab, setCurrentTab] = useState<Tab>('home');
-
-  if (loading) {
-    return <div className="h-screen flex items-center justify-center text-bolao-muted">Carregando...</div>;
-  }
-
-  if (!session) {
-    return <Login />;
-  }
+  if (loading) return <div className="h-screen flex items-center justify-center bg-bolao-bg font-display text-bolao-green">⚽ CARREGANDO...</div>;
+  if (!user) return <Login />;
 
   return (
-    <div className="flex flex-col h-screen max-w-md mx-auto relative bg-bolao-bg shadow-2xl overflow-hidden">
-      
-      {/* Área principal rolável */}
-      <main className="flex-1 overflow-y-auto hide-scrollbar">
-        {currentTab === 'home' && <Home />}
-        {currentTab === 'jogos' && <Jogos />}
-        {currentTab === 'especiais' && <Especiais />}
-        {currentTab === 'ranking' && <Ranking />}
-      </main>
-      
-      {/* Navegação Inferior fixada */}
-      <BottomNav currentTab={currentTab} onChangeTab={setCurrentTab} />
-      
+    <div className="min-h-screen bg-gray-100 flex justify-center">
+      {/* Container Centralizado (Simulando um celular) */}
+      <div className="w-full max-w-md bg-bolao-bg min-h-screen shadow-2xl relative flex flex-col">
+        
+        <main className="flex-1 overflow-y-auto">
+          {currentTab === 'home' && <Home />}
+          {currentTab === 'jogos' && <Jogos />}
+          {currentTab === 'especiais' && <Especiais />}
+          {currentTab === 'ranking' && <Ranking />}
+        </main>
+        
+        {/* Nav agora respeita o limite do container */}
+        <BottomNav currentTab={currentTab} onChangeTab={setCurrentTab} />
+      </div>
     </div>
   );
 }
@@ -43,7 +36,7 @@ function MainApp() {
 export default function App() {
   return (
     <AuthProvider>
-      <MainApp />
+      <AppContent />
     </AuthProvider>
   );
 }

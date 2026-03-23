@@ -3,3 +3,24 @@
 @tailwind utilities;
 
 .hide-scrollbar::-webkit-scrollbar { display: none; }
+
+:root {
+  --green: #0A7C4E;
+  --green-light: #E8F5EF;
+  --green-mid: #B6DECA;
+  --green-accent: #12A066;
+  --gold: #9A6D08;
+  --gold-light: #FDF5E0;
+  --gold-border: #E8D080;
+  --red: #C0392B;
+  --red-light: #FDECEA;
+  --bg: #F5F3EE;
+  --bg2: #FFFFFF;
+  --bg3: #EEECEA;
+  --bg4: #E4E2DC;
+  --border: #DDD9D0;
+  --text: #1A1916;
+  --muted: #7A7768;
+  --radius: 14px;
+  --radius-sm: 9px;
+}

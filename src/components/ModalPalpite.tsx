@@ -1,136 +1,99 @@
 import { useState, useEffect } from 'react';
-import { supabase } from '../lib/supabase';
-import { useAuth } from '../hooks/useAuth';
 
+// Tipagem exata do que o Jogos.tsx envia para cá
 type Match = {
   id: string;
-  home_team: { name: string; group_letter: string; id?: string };
-  away_team: { name: string; group_letter: string; id?: string };
+  home_team: { name: string; flag_url?: string };
+  away_team: { name: string; flag_url?: string };
+};
+
+type Pick = {
+  home_score: number;
+  away_score: number;
 };
 
 interface ModalPalpiteProps {
   isOpen: boolean;
   onClose: () => void;
-  match: Match | null;
-  onSaveSuccess?: () => void; // Callback para recarregar a lista após salvar
+  match: Match;
+  currentPick: Pick | null;
+  onSave: (matchId: string, homeScore: number, awayScore: number) => void;
 }
 
-export default function ModalPalpite({ isOpen, onClose, match, onSaveSuccess }: ModalPalpiteProps) {
-  const { user } = useAuth();
-  const [homeScore, setHomeScore] = useState(0);
-  const [awayScore, setAwayScore] = useState(0);
-  const [pickId, setPickId] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
+export default function ModalPalpite({ isOpen, onClose, match, currentPick, onSave }: ModalPalpiteProps) {
+  const [homeScore, setHomeScore] = useState<string>('');
+  const [awayScore, setAwayScore] = useState<string>('');
 
-  // Busca um palpite existente sempre que o modal abrir
+  // Preenche os inputs se o usuário já tiver um palpite salvo
   useEffect(() => {
-    async function fetchExistingPick() {
-      if (isOpen && match && user) {
-        setIsLoading(true);
-        const { data, error } = await supabase
-          .from('match_picks')
-          .select('id, home_score, away_score')
-          .eq('user_id', user.id)
-          .eq('match_id', match.id)
-          .maybeSingle();
-
-        if (data && !error) {
-          setHomeScore(data.home_score);
-          setAwayScore(data.away_score);
-          setPickId(data.id);
-        } else {
-          setHomeScore(0);
-          setAwayScore(0);
-          setPickId(null);
-        }
-        setIsLoading(false);
-      }
+    if (isOpen) {
+      setHomeScore(currentPick ? String(currentPick.home_score) : '');
+      setAwayScore(currentPick ? String(currentPick.away_score) : '');
     }
-    fetchExistingPick();
-  }, [isOpen, match, user]);
+  }, [isOpen, currentPick]);
 
-  if (!isOpen || !match) return null;
+  if (!isOpen) return null;
 
-  const handleSave = async () => {
-    if (!user) return;
-    setIsLoading(true);
-
-    const pickData = {
-      user_id: user.id,
-      match_id: match.id,
-      home_score: homeScore,
-      away_score: awayScore,
-    };
-
-    if (pickId) {
-      // Atualiza palpite existente
-      await supabase.from('match_picks').update(pickData).eq('id', pickId);
-    } else {
-      // Insere novo palpite
-      await supabase.from('match_picks').insert([pickData]);
+  const handleSave = () => {
+    if (homeScore === '' || awayScore === '') {
+      alert('Preencha os dois placares!');
+      return;
     }
-
-    setIsLoading(false);
-    if (onSaveSuccess) onSaveSuccess();
+    // Converte os textos para números antes de salvar
+    onSave(match.id, parseInt(homeScore), parseInt(awayScore));
     onClose();
   };
 
   return (
     <div className="fixed inset-0 bg-black/50 flex flex-col justify-end z-50 animate-in fade-in duration-200" onClick={onClose}>
       <div 
-        className="bg-bolao-bg-card rounded-t-[24px] border border-bolao-border border-b-0 pb-8 animate-in slide-in-from-bottom duration-300 relative"
+        className="bg-bolao-bg-card rounded-t-[24px] border border-bolao-border border-b-0 pb-8 animate-in slide-in-from-bottom duration-300 flex flex-col items-center"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="w-9 h-1 bg-bolao-border rounded-full mx-auto mt-3 mb-4"></div>
-        <h2 className="font-display text-xl tracking-wide px-5 text-bolao-text">Seu palpite</h2>
+        <div className="w-9 h-1 bg-bolao-border rounded-full mt-3 mb-6 shrink-0"></div>
         
-        <div className="mx-5 my-3 flex items-center bg-bolao-bg border border-bolao-border rounded-xl p-3.5">
-          <div className="flex-1 flex flex-col items-center gap-1">
-            <span className="text-xs font-semibold">{match.home_team.name}</span>
+        <h2 className="font-display text-xl tracking-wide text-bolao-text mb-6">Seu Palpite</h2>
+
+        <div className="flex items-center justify-center gap-6 w-full px-8 mb-8">
+          {/* Time da Casa */}
+          <div className="flex flex-col items-center flex-1">
+            <span className="text-sm font-medium text-bolao-text mb-3 text-center">
+              {match.home_team?.name || 'A definir'}
+            </span>
+            <input 
+              type="number" 
+              min="0"
+              value={homeScore}
+              onChange={(e) => setHomeScore(e.target.value)}
+              className="w-16 h-16 text-center text-3xl font-display bg-bolao-bg border border-bolao-border rounded-xl focus:outline-none focus:border-bolao-green"
+            />
           </div>
-          <div className="w-10 text-center text-bolao-muted font-display text-lg">VS</div>
-          <div className="flex-1 flex flex-col items-center gap-1">
-            <span className="text-xs font-semibold">{match.away_team.name}</span>
+
+          <span className="text-xl font-bold text-bolao-muted mt-8">X</span>
+
+          {/* Time Visitante */}
+          <div className="flex flex-col items-center flex-1">
+            <span className="text-sm font-medium text-bolao-text mb-3 text-center">
+              {match.away_team?.name || 'A definir'}
+            </span>
+            <input 
+              type="number" 
+              min="0"
+              value={awayScore}
+              onChange={(e) => setAwayScore(e.target.value)}
+              className="w-16 h-16 text-center text-3xl font-display bg-bolao-bg border border-bolao-border rounded-xl focus:outline-none focus:border-bolao-green"
+            />
           </div>
         </div>
 
-        <div className="flex items-center justify-center gap-3 px-5 py-1">
-          <div className="flex flex-col items-center gap-1">
-            <span className="text-[10px] text-bolao-muted font-semibold tracking-wider uppercase">
-              {match.home_team.name}
-            </span>
-            <div className="flex items-center">
-              <button onClick={() => setHomeScore(Math.max(0, homeScore - 1))} className="w-10 h-11 bg-bolao-bg border border-bolao-border rounded-l-lg text-xl font-light active:bg-gray-100 flex items-center justify-center">−</button>
-              <div className="w-12 h-11 bg-bolao-bg-card border-y border-bolao-border flex items-center justify-center font-mono text-2xl font-medium">
-                {homeScore}
-              </div>
-              <button onClick={() => setHomeScore(homeScore + 1)} className="w-10 h-11 bg-bolao-bg border border-bolao-border rounded-r-lg text-xl font-light active:bg-gray-100 flex items-center justify-center">+</button>
-            </div>
-          </div>
-
-          <div className="font-display text-2xl text-bolao-muted px-1">–</div>
-
-          <div className="flex flex-col items-center gap-1">
-            <span className="text-[10px] text-bolao-muted font-semibold tracking-wider uppercase">
-              {match.away_team.name}
-            </span>
-            <div className="flex items-center">
-              <button onClick={() => setAwayScore(Math.max(0, awayScore - 1))} className="w-10 h-11 bg-bolao-bg border border-bolao-border rounded-l-lg text-xl font-light active:bg-gray-100 flex items-center justify-center">−</button>
-              <div className="w-12 h-11 bg-bolao-bg-card border-y border-bolao-border flex items-center justify-center font-mono text-2xl font-medium">
-                {awayScore}
-              </div>
-              <button onClick={() => setAwayScore(awayScore + 1)} className="w-10 h-11 bg-bolao-bg border border-bolao-border rounded-r-lg text-xl font-light active:bg-gray-100 flex items-center justify-center">+</button>
-            </div>
-          </div>
+        <div className="w-full px-5">
+          <button 
+            onClick={handleSave}
+            className="w-full h-14 bg-bolao-green text-white text-[15px] font-semibold rounded-xl tracking-wide active:opacity-80 transition-opacity"
+          >
+            Confirmar Palpite
+          </button>
         </div>
-
-        <button 
-          onClick={handleSave}
-          disabled={isLoading}
-          className={`mx-5 mt-5 w-[calc(100%-40px)] h-12 bg-bolao-green text-white text-[15px] font-semibold rounded-xl tracking-wide transition-opacity flex justify-center items-center ${isLoading ? 'opacity-50' : 'active:opacity-80'}`}
-        >
-          {isLoading ? 'Carregando...' : 'Confirmar palpite'}
-        </button>
       </div>
     </div>
   );
