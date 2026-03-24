@@ -8,11 +8,9 @@ type LeaderboardEntry = {
   group_points: number;
   match_points: number;
   special_points: number;
-  rank: number;
   user: { name: string; avatar_url: string | null };
 };
 
-// Emojis de avatar baseados na posição — fallback enquanto não temos foto
 const AVATARS = ['🦁', '🐯', '🦊', '⚡', '🌙', '🎯', '🔥', '🐉', '🦅', '🌟'];
 
 export default function Ranking() {
@@ -32,7 +30,6 @@ export default function Ranking() {
           group_points,
           match_points,
           special_points,
-          rank,
           user:users(name, avatar_url)
         `)
         .order('total_points', { ascending: false });
@@ -65,12 +62,15 @@ export default function Ranking() {
       </div>
 
       <div className="rklist">
+        {leaderboard.length === 0 && (
+          <div className="text-center p-10 text-bolao-muted text-sm">
+            Nenhuma pontuação registrada ainda.
+          </div>
+        )}
+
         {leaderboard.map((entry, index) => {
           const isMe = entry.user_id === user?.id;
           const isExpanded = expanded === entry.user_id;
-          const avatar = entry.user?.avatar_url
-            ? <img src={entry.user.avatar_url} className="w-full h-full object-cover rounded-full" />
-            : AVATARS[index] ?? '👤';
 
           return (
             <div key={entry.user_id}>
@@ -80,19 +80,23 @@ export default function Ranking() {
               >
                 <div className={`p-num ${rankColor(index)}`}>{index + 1}</div>
                 <div className={`p-av ${isMe ? 'me' : ''}`}>
-                  {typeof avatar === 'string' ? avatar : avatar}
+                  {entry.user?.avatar_url ? (
+                    <img src={entry.user.avatar_url} className="w-full h-full object-cover rounded-full" alt={entry.user.name} />
+                  ) : (
+                    AVATARS[index] ?? '👤'
+                  )}
                 </div>
                 <div className="p-info">
                   <div className="p-name">
                     {entry.user?.name || 'Participante'}
-                    {isMe && <span style={{ fontSize: '10px', color: 'var(--green)', fontWeight: 700, marginLeft: '6px' }}>você</span>}
+                    {isMe && <span className="text-[10px] text-bolao-green font-bold ml-1">você</span>}
                   </div>
                   <div className="p-det">
-                    {entry.match_points} pts em jogos · {entry.group_points} pts em grupos
+                    {entry.match_points} pts jogos · {entry.group_points} pts grupos
                   </div>
                 </div>
                 <div className="p-right">
-                  <div className={`p-pts ${index < 3 ? 'gr' : ''} ${isMe ? 'go' : ''}`}>
+                  <div className={`p-pts ${index < 3 && !isMe ? 'gr' : ''} ${isMe ? 'go' : ''}`}>
                     {entry.total_points}
                   </div>
                 </div>
@@ -120,12 +124,6 @@ export default function Ranking() {
             </div>
           );
         })}
-
-        {leaderboard.length === 0 && (
-          <div className="text-center p-10 text-bolao-muted text-sm">
-            Nenhuma pontuação registrada ainda.
-          </div>
-        )}
       </div>
     </div>
   );
