@@ -1,5 +1,3 @@
-import { useEffect } from 'react';
-
 type Team = { id: string; name: string; group_letter: string; flag_url?: string };
 
 type ModalEspeciaisProps = {
