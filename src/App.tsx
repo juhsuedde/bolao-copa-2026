@@ -7,32 +7,33 @@ import Especiais from './pages/Especiais';
 import Ranking from './pages/Ranking';
 import BottomNav from './layout/BottomNav';
 
+// Tipo compartilhado com BottomNav e outras páginas se necessário
+export type Tab = 'home' | 'jogos' | 'especiais' | 'ranking';
+
 function AppContent() {
   const { user, loading } = useAuth();
-  enum Tab {
-  JOGOS = "jogos",
-  RANKING = "ranking",
-  ESPECIAIS = "especiais"
-  }
-  const [activeTab, setActiveTab] = useState<Tab>(Tab.JOGOS);
+  const [activeTab, setActiveTab] = useState<Tab>('home');
 
-  if (loading) return <div className="h-screen flex items-center justify-center bg-bolao-bg font-display text-bolao-green">⚽ CARREGANDO...</div>;
+  if (loading) {
+    return (
+      <div className="h-screen flex items-center justify-center bg-bolao-bg font-display text-bolao-green text-2xl tracking-widest">
+        ⚽ CARREGANDO...
+      </div>
+    );
+  }
+
   if (!user) return <Login />;
 
   return (
-    <div className="min-h-screen bg-gray-100 flex justify-center">
-      {/* Container Centralizado (Simulando um celular) */}
+    <div className="min-h-screen bg-gray-200 flex justify-center">
       <div className="w-full max-w-md bg-bolao-bg min-h-screen shadow-2xl relative flex flex-col">
-        
         <main className="flex-1 overflow-y-auto">
-          {currentTab === 'home' && <Home />}
-          {currentTab === 'jogos' && <Jogos />}
-          {currentTab === 'especiais' && <Especiais />}
-          {currentTab === 'ranking' && <Ranking />}
+          {activeTab === 'home' && <Home />}
+          {activeTab === 'jogos' && <Jogos />}
+          {activeTab === 'especiais' && <Especiais />}
+          {activeTab === 'ranking' && <Ranking />}
         </main>
-        
-        {/* Nav agora respeita o limite do container */}
-        <BottomNav currentTab={currentTab} onChangeTab={setCurrentTab} />
+        <BottomNav currentTab={activeTab} onChangeTab={setActiveTab} />
       </div>
     </div>
   );

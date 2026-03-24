@@ -1,12 +1,7 @@
 import { useState, useEffect } from 'react';
+import type { Match } from '../pages/Jogos';
 
-// Tipagem exata do que o Jogos.tsx envia para cá
-type Match = {
-  id: string;
-  home_team: { name: string; flag_url?: string };
-  away_team: { name: string; flag_url?: string };
-};
-
+// Reutiliza o tipo Match do Jogos.tsx — fonte única de verdade
 type Pick = {
   home_score: number;
   away_score: number;
@@ -21,77 +16,101 @@ interface ModalPalpiteProps {
 }
 
 export default function ModalPalpite({ isOpen, onClose, match, currentPick, onSave }: ModalPalpiteProps) {
-  const [homeScore, setHomeScore] = useState<string>('');
-  const [awayScore, setAwayScore] = useState<string>('');
+  const [homeScore, setHomeScore] = useState(0);
+  const [awayScore, setAwayScore] = useState(0);
 
-  // Preenche os inputs se o usuário já tiver um palpite salvo
   useEffect(() => {
     if (isOpen) {
-      setHomeScore(currentPick ? String(currentPick.home_score) : '');
-      setAwayScore(currentPick ? String(currentPick.away_score) : '');
+      setHomeScore(currentPick?.home_score ?? 0);
+      setAwayScore(currentPick?.away_score ?? 0);
     }
   }, [isOpen, currentPick]);
 
   if (!isOpen) return null;
 
   const handleSave = () => {
-    if (homeScore === '' || awayScore === '') {
-      alert('Preencha os dois placares!');
-      return;
-    }
-    // Converte os textos para números antes de salvar
-    onSave(match.id, parseInt(homeScore), parseInt(awayScore));
+    onSave(match.id, homeScore, awayScore);
     onClose();
   };
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex flex-col justify-end z-50 animate-in fade-in duration-200" onClick={onClose}>
-      <div 
-        className="bg-bolao-bg-card rounded-t-[24px] border border-bolao-border border-b-0 pb-8 animate-in slide-in-from-bottom duration-300 flex flex-col items-center"
-        onClick={(e) => e.stopPropagation()}
+    <div
+      className="fixed inset-0 bg-black/50 flex flex-col justify-end z-50"
+      onClick={onClose}
+    >
+      <div
+        className="bg-bolao-bg-card rounded-t-[24px] border border-bolao-border border-b-0 pb-8"
+        onClick={e => e.stopPropagation()}
       >
-        <div className="w-9 h-1 bg-bolao-border rounded-full mt-3 mb-6 shrink-0"></div>
-        
-        <h2 className="font-display text-xl tracking-wide text-bolao-text mb-6">Seu Palpite</h2>
+        {/* Handle */}
+        <div className="w-9 h-1 bg-bolao-border rounded-full mx-auto mt-3 mb-[18px]" />
 
-        <div className="flex items-center justify-center gap-6 w-full px-8 mb-8">
-          {/* Time da Casa */}
-          <div className="flex flex-col items-center flex-1">
-            <span className="text-sm font-medium text-bolao-text mb-3 text-center">
-              {match.home_team?.name || 'A definir'}
-            </span>
-            <input 
-              type="number" 
-              min="0"
-              value={homeScore}
-              onChange={(e) => setHomeScore(e.target.value)}
-              className="w-16 h-16 text-center text-3xl font-display bg-bolao-bg border border-bolao-border rounded-xl focus:outline-none focus:border-bolao-green"
-            />
+        <h2 className="font-display text-xl tracking-wide px-5 text-bolao-text mb-3">Seu palpite</h2>
+
+        {/* Match preview */}
+        <div className="mx-5 mb-3 flex items-center bg-bolao-bg border border-bolao-border rounded-xl p-[14px]">
+          <div className="flex-1 flex flex-col items-center gap-1">
+            <span className="text-[32px]">⚽</span>
+            <span className="text-xs font-semibold">{match.home?.name}</span>
           </div>
-
-          <span className="text-xl font-bold text-bolao-muted mt-8">X</span>
-
-          {/* Time Visitante */}
-          <div className="flex flex-col items-center flex-1">
-            <span className="text-sm font-medium text-bolao-text mb-3 text-center">
-              {match.away_team?.name || 'A definir'}
-            </span>
-            <input 
-              type="number" 
-              min="0"
-              value={awayScore}
-              onChange={(e) => setAwayScore(e.target.value)}
-              className="w-16 h-16 text-center text-3xl font-display bg-bolao-bg border border-bolao-border rounded-xl focus:outline-none focus:border-bolao-green"
-            />
+          <div className="w-9 text-center font-display text-[18px] text-bolao-muted">VS</div>
+          <div className="flex-1 flex flex-col items-center gap-1">
+            <span className="text-[32px]">⚽</span>
+            <span className="text-xs font-semibold">{match.away?.name}</span>
           </div>
         </div>
 
-        <div className="w-full px-5">
-          <button 
+        {/* Stepper de placar — melhor UX no mobile do que input numérico */}
+        <div className="flex items-center justify-center gap-[10px] px-5 py-1">
+          {/* Casa */}
+          <div className="flex flex-col items-center gap-[5px]">
+            <span className="text-[10px] text-bolao-muted font-semibold tracking-[0.06em] uppercase">
+              {match.home?.name}
+            </span>
+            <div className="flex items-center">
+              <button
+                onClick={() => setHomeScore(s => Math.max(0, s - 1))}
+                className="w-[38px] h-[46px] bg-bolao-bg border border-bolao-border rounded-l-lg flex items-center justify-center text-xl font-light active:bg-bolao-border transition-colors select-none"
+              >−</button>
+              <div className="w-[50px] h-[46px] bg-white border-t border-b border-bolao-border flex items-center justify-center font-mono text-2xl font-medium">
+                {homeScore}
+              </div>
+              <button
+                onClick={() => setHomeScore(s => s + 1)}
+                className="w-[38px] h-[46px] bg-bolao-bg border border-bolao-border rounded-r-lg flex items-center justify-center text-xl font-light active:bg-bolao-border transition-colors select-none"
+              >+</button>
+            </div>
+          </div>
+
+          <span className="font-display text-[26px] text-bolao-muted px-[6px]">–</span>
+
+          {/* Visitante */}
+          <div className="flex flex-col items-center gap-[5px]">
+            <span className="text-[10px] text-bolao-muted font-semibold tracking-[0.06em] uppercase">
+              {match.away?.name}
+            </span>
+            <div className="flex items-center">
+              <button
+                onClick={() => setAwayScore(s => Math.max(0, s - 1))}
+                className="w-[38px] h-[46px] bg-bolao-bg border border-bolao-border rounded-l-lg flex items-center justify-center text-xl font-light active:bg-bolao-border transition-colors select-none"
+              >−</button>
+              <div className="w-[50px] h-[46px] bg-white border-t border-b border-bolao-border flex items-center justify-center font-mono text-2xl font-medium">
+                {awayScore}
+              </div>
+              <button
+                onClick={() => setAwayScore(s => s + 1)}
+                className="w-[38px] h-[46px] bg-bolao-bg border border-bolao-border rounded-r-lg flex items-center justify-center text-xl font-light active:bg-bolao-border transition-colors select-none"
+              >+</button>
+            </div>
+          </div>
+        </div>
+
+        <div className="px-5 mt-[18px]">
+          <button
             onClick={handleSave}
-            className="w-full h-14 bg-bolao-green text-white text-[15px] font-semibold rounded-xl tracking-wide active:opacity-80 transition-opacity"
+            className="w-full h-[50px] bg-bolao-green text-white text-[15px] font-semibold rounded-xl tracking-wide active:opacity-80 transition-opacity"
           >
-            Confirmar Palpite
+            Confirmar palpite
           </button>
         </div>
       </div>

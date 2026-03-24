@@ -5,3 +5,11 @@
     { "path": "./tsconfig.node.json" }
   ]
 }
+
+{
+  "compilerOptions": {
+    "strict": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true
+  }
+}
