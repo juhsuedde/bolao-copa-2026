@@ -29,7 +29,8 @@ export default function Login() {
           Bolão Copa 2026
         </h1>
         <p className="text-sm text-bolao-muted mb-10 px-2">
-          Mostre que você entende de futebol. Faça seu palpite, desafie seus amigos e domine o ranking.
+          Bora jogar, amigos?<br />
+          Loga aí pra gente brincar.
         </p>
 
         {/* Botão do Google Estilizado */}
