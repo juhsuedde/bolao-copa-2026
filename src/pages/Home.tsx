@@ -40,6 +40,12 @@ export default function Home() {
     fetchRanking();
   }, []);
 
+  // Função simples e direta para deslogar
+  const handleLogout = async () => {
+    const { error } = await supabase.auth.signOut();
+    if (error) console.error("Erro ao sair:", error.message);
+  };
+
   if (loading) {
     return <div className="p-6 text-bolao-muted flex justify-center mt-10">Carregando ranking...</div>;
   }
@@ -146,6 +152,19 @@ export default function Home() {
             </div>
           )}
         </div>
+      </div>
+
+      {/* Área de Logout */}
+      <div className="px-5 mt-4 mb-8">
+        <button
+          onClick={handleLogout}
+          className="w-full py-3 flex items-center justify-center gap-2 text-[11px] uppercase tracking-widest font-bold text-red-500 bg-red-50 border border-red-100 rounded-xl hover:bg-red-100 transition-colors"
+        >
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+          </svg>
+          Sair da Conta
+        </button>
       </div>
       
     </div>
