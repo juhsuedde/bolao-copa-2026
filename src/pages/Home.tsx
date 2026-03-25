@@ -70,7 +70,7 @@ export default function Home() {
       {/* Hero card de pontuação */}
       <div className="mx-5 bg-bolao-green rounded-2xl p-5 text-white relative overflow-hidden shadow-lg mt-2">
         <div className="absolute -right-2 -top-4 font-display text-[120px] text-white opacity-5 select-none pointer-events-none leading-none">
-          26
+          2026
         </div>
         <div className="text-[10px] font-semibold tracking-[0.1em] uppercase opacity-75 mb-1">
           Sua pontuação
@@ -152,29 +152,52 @@ export default function Home() {
 
       {/* Banner pré-Copa — visível apenas antes do 1º jogo */}
       {showPreCopaBanner && (
-        <div className="mx-5 bg-bolao-bg-card border border-bolao-border rounded-2xl p-4 flex flex-col gap-3">
-          <div className="flex items-center gap-2">
-            <span className="text-lg">⏳</span>
-            <div>
-              <div className="text-[11px] font-bold text-bolao-text tracking-wide uppercase">A Copa ainda não começou</div>
-              <div className="text-[11px] text-bolao-muted mt-0.5">Vocês começarão a pontuar assim que a bola rolar!</div>
+        <div className="mx-5 bg-bolao-bg-card border border-bolao-border rounded-2xl p-5 flex flex-col gap-4 shadow-sm">
+          
+          {/* Cabeçalho do Banner */}
+          <div className="flex items-start gap-3">
+            <div className="w-6 h-5 flex items-center justify-center shrink-0 text-lg">
+              ⏳
+            </div>
+            <div className="flex-1">
+              <div className="text-[11px] font-bold text-bolao-text tracking-wide uppercase leading-tight">
+                A Copa ainda não começou
+              </div>
+              <div className="text-[11px] text-bolao-muted mt-1 leading-normal">
+                Você começará a pontuar assim que a bola rolar!
+              </div>
             </div>
           </div>
-          <div className="flex flex-col gap-2">
-            <div className="flex items-start gap-2">
-              <span className="text-bolao-green font-bold text-sm mt-0.5">⚽</span>
-              <div>
-                <div className="text-[12px] font-semibold text-bolao-text">Aba Jogos</div>
-                <div className="text-[11px] text-bolao-muted">Pode palpitar quando quiser, mas 10 minutos antes de cada partida os jogos travam.</div>
+
+          {/* Lista de Dicas */}
+          <div className="flex flex-col gap-4">
+            
+            {/* Item: Jogos */}
+            <div className="flex items-start gap-3">
+              <div className="w-6 h-5 flex items-center justify-center shrink-0 text-bolao-green text-sm font-bold">
+                ⚽
+              </div>
+              <div className="flex-1">
+                <div className="text-[12px] font-bold text-bolao-text leading-tight">Aba Jogos</div>
+                <div className="text-[11px] text-bolao-muted mt-1 leading-normal">
+                  Pode palpitar quando quiser, mas 10 minutos antes de cada partida os jogos travam.
+                </div>
               </div>
             </div>
-            <div className="flex items-start gap-2">
-              <span className="text-bolao-gold font-bold text-sm mt-0.5">★</span>
-              <div>
-                <div className="text-[12px] font-semibold text-bolao-text">Aba Especiais</div>
-                <div className="text-[11px] text-bolao-muted">Vote nos classifados por grupo, times da final, campeão e artilheiro da Copa antes do primeiro jogo começar.</div>
+
+            {/* Item: Especiais */}
+            <div className="flex items-start gap-3">
+              <div className="w-6 h-5 flex items-center justify-center shrink-0 text-bolao-gold text-sm font-bold">
+                ★
+              </div>
+              <div className="flex-1">
+                <div className="text-[12px] font-bold text-bolao-text leading-tight">Aba Especiais</div>
+                <div className="text-[11px] text-bolao-muted mt-1 leading-normal">
+                  Vote nos classificados por grupo, times da final, campeão e artilheiro antes do primeiro jogo.
+                </div>
               </div>
             </div>
+
           </div>
         </div>
       )}
