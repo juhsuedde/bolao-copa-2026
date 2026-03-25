@@ -59,22 +59,6 @@ export default function ModalResultadoJogo({ isOpen, onClose, match }: ModalResu
   if (!isOpen || !match) return null;
 
   const isKnockout = match.stage !== 'group_stage';
-  const finished = match.home_score !== null && match.away_score !== null;
-
-  const getResultText = () => {
-    if (!finished) return '';
-    if (match.home_score === match.away_score) {
-      return `${match.home_score} x ${match.away_score} (Empate)`;
-    }
-    const winner = match.home_score > match.away_score ? match.home?.name : match.away?.name;
-    return `${match.home_score} x ${match.away_score}`;
-  };
-
-  const getPtsBadgeClass = (points: number) => {
-    if (points >= 8) return 'pts-exato';
-    if (points > 0) return 'pts-parcial';
-    return 'pts-zero';
-  };
 
   const getPtsText = (points: number) => {
     if (points >= 8) return `+${points} pts · exato!`;
@@ -144,9 +128,9 @@ export default function ModalResultadoJogo({ isOpen, onClose, match }: ModalResu
               <div className="flex flex-col items-center px-4">
                 <div className="bg-bolao-bg rounded-xl px-4 py-2 border border-bolao-border">
                   <span className="font-mono text-2xl font-bold text-bolao-text">
-                    {match.home_score}
+                    {match.home_score ?? '-'}
                     <span className="text-bolao-muted text-sm mx-1">x</span>
-                    {match.away_score}
+                    {match.away_score ?? '-'}
                   </span>
                 </div>
                 <span className="text-[9px] text-bolao-green font-semibold mt-2 uppercase tracking-wider">

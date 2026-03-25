@@ -277,7 +277,7 @@ export default function Jogos() {
         onClick={() => openModal(match)}
         className={`bg-bolao-bg-card border rounded-[9px] px-3 py-[9px] transition-colors ${
           pick ? 'border-l-[3px] border-bolao-green-mid' : 'border-bolao-border'
-        } ${finished ? 'cursor-pointer active:bg-gray-50 border-bolao-green-mid/50' : locked ? 'opacity-70' : 'cursor-pointer active:bg-gray-50'}`}
+        } ${finished ? 'opacity-60 cursor-pointer active:bg-gray-50 border-bolao-green-mid/40' : locked ? 'opacity-70' : 'cursor-pointer active:bg-gray-50'}`}
       >
         <div className="flex justify-between items-center mb-[7px]">
           <span className="text-[10px] font-semibold text-bolao-muted tracking-[0.07em] uppercase">
