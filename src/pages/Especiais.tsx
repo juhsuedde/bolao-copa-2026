@@ -14,7 +14,6 @@ export default function Especiais() {
   const [picks, setPicks] = useState<Record<string, SpecialPick>>({});
   const [loading, setLoading] = useState(true);
 
-  // Estado para controlar se o card dos grupos está expandido ou recolhido
   const [isGroupsExpanded, setIsGroupsExpanded] = useState(false);
 
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -94,9 +93,9 @@ export default function Especiais() {
   };
 
   const getTeamCode = (teamId: string | null) => {
-  if (!teamId) return null;
-  return teamId.toUpperCase();
-    };
+    if (!teamId) return null;
+    return teamId.toUpperCase();
+  };
 
   const renderTeamFlag = (teamName: string | null) => {
     const team = teams.find(t => t.name === teamName);
@@ -121,17 +120,11 @@ export default function Especiais() {
     return '--';
   };
 
-  const getStatusBadge = (teamName: string | null) => {
-    if (!teamName) return { text: '–', className: 'gpb pend' };
-    return { text: '?', className: 'gpb pend' };
-  };
-
   if (loading) return <div className="p-10 text-center uppercase font-display text-xs tracking-widest text-bolao-muted">Carregando...</div>;
 
   return (
     <div className="flex flex-col gap-5 pb-24">
       
-      {/* Header da página */}
       <div className="screen-header" style={{ padding: '14px 20px 0', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0, background: 'var(--bg)' }}>
         <div className="screen-title" style={{ fontFamily: 'Bebas Neue, sans-serif', fontSize: '30px', letterSpacing: '1px', lineHeight: 1 }}>Especiais</div>
         <div className="hchip gold" style={{ 
@@ -143,10 +136,8 @@ export default function Especiais() {
       <div className="scroll" style={{ flex: 1, overflowY: 'auto', overflowX: 'hidden', paddingBottom: '16px' }}>
         <div className="esplist" style={{ padding: '10px 20px', display: 'flex', flexDirection: 'column', gap: '9px' }}>
 
-          {/* --- CLASSIFICADOS POR GRUPO --- */}
           <div className="ecard" style={{ background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', overflow: 'hidden' }}>
             
-            {/* Header do card (Clicável para expandir/recolher) */}
             <div 
               className="ecard-h" 
               onClick={() => setIsGroupsExpanded(!isGroupsExpanded)}
@@ -159,7 +150,6 @@ export default function Especiais() {
                 <div style={{ fontSize: '11px', color: 'var(--muted)', marginTop: '3px' }}>até 72 pts · 6 pts por grupo exato</div>
               </div>
               
-              {/* Seta indicadora (Dropdown Toggle) */}
               <div style={{ padding: '4px' }}>
                 <svg className={`w-4 h-4 text-bolao-muted transform transition-transform ${isGroupsExpanded ? '' : 'rotate-180'}`} fill="currentColor" viewBox="0 0 20 20">
                   <path fillRule="evenodd" d="M14.707 12.707a1 1 0 01-1.414 0L10 9.414l-3.293 3.293a1 1 0 01-1.414-1.414l4-4a1 1 0 011.414 0l4 4a1 1 0 010 1.414z" clipRule="evenodd" />
@@ -167,11 +157,9 @@ export default function Especiais() {
               </div>
             </div>
 
-            {/* Conteúdo dos grupos (Visível apenas se expandido) */}
             {isGroupsExpanded && (
               <div className="gcont" style={{ padding: '10px 14px', borderTop: '1px solid var(--border)', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '7px' }}>
                 {ALL_GROUPS.map(grupo => {
-                    // Pegamos os IDs das seleções escolhidas
                     const pick1Id = picks[`group_${grupo.toLowerCase()}_1`]?.team_id;
                     const pick2Id = picks[`group_${grupo.toLowerCase()}_2`]?.team_id;
                     const points = getGroupPoints(grupo);
@@ -197,8 +185,7 @@ export default function Especiais() {
                                 background: 'var(--bg2)', cursor: 'pointer' 
                                 }}
                             >
-                                {/* Bandeira */}
-                                <div style={{ width: '22px', display: 'flex', justifyContent: 'center', shrink: 0 }}>
+                                <div style={{ width: '22px', display: 'flex', justifyContent: 'center', flexShrink: 0 }}>
                                 {teamData?.flag_url ? (
                                     <img src={teamData.flag_url} alt="" style={{ width: '100%', height: '14px', objectFit: 'cover', borderRadius: '2px' }} />
                                 ) : (
@@ -206,23 +193,22 @@ export default function Especiais() {
                                 )}
                                 </div>
 
-                                {/* Código de 3 letras (Estilo Placar) */}
                                 <div style={{ 
                                 flex: 1, fontSize: '10px', fontWeight: 700, 
-                                fontFamily: 'DM Mono, monospace', // Fonte mono para parecer placar mesmo
+                                fontFamily: 'DM Mono, monospace',
                                 color: teamId ? 'var(--text)' : 'var(--muted)',
                                 letterSpacing: '0.05em'
                                 }}>
                                 {getTeamCode(teamId) || 'selecione'}
                                 </div>
 
-                                {/* Status (Check/Interrogação) */}
                                 <div style={{ 
                                 fontSize: '9px', width: '16px', height: '16px', borderRadius: '4px', 
                                 background: teamId ? 'var(--green-light)' : 'var(--bg3)', 
                                 display: 'flex', alignItems: 'center', justifyContent: 'center', 
                                 color: teamId ? 'var(--green)' : 'var(--muted)',
-                                border: teamId ? '1px solid var(--green-mid)' : '1px solid var(--border)'
+                                border: teamId ? '1px solid var(--green-mid)' : '1px solid var(--border)',
+                                flexShrink: 0
                                 }}>
                                 {teamId ? '✓' : 'x'}
                                 </div>
@@ -236,7 +222,6 @@ export default function Especiais() {
             )}
           </div>
 
-          {/* --- TIMES NA FINAL --- */}
           <div className="ecard" style={{ background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', overflow: 'hidden' }}>
             <div className="ecard-h" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '11px 14px 9px' }}>
               <div className="ecard-t" style={{ fontSize: '11px', fontWeight: 600, color: 'var(--muted)', letterSpacing: '0.08em', textTransform: 'uppercase' }}>Times na Final</div>
@@ -278,7 +263,6 @@ export default function Especiais() {
             </div>
           </div>
 
-          {/* --- CAMPEÃO --- */}
           <div className="ecard" style={{ background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', overflow: 'hidden' }}>
             <div className="ecard-h" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '11px 14px 9px' }}>
               <div className="ecard-t" style={{ fontSize: '11px', fontWeight: 600, color: 'var(--muted)', letterSpacing: '0.08em', textTransform: 'uppercase' }}>Campeão da Copa</div>
@@ -302,7 +286,6 @@ export default function Especiais() {
             </div>
           </div>
 
-          {/* --- ARTILHEIRO --- */}
           <div className="ecard" style={{ background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', overflow: 'hidden' }}>
             <div className="ecard-h" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '11px 14px 9px' }}>
               <div className="ecard-t" style={{ fontSize: '11px', fontWeight: 600, color: 'var(--muted)', letterSpacing: '0.08em', textTransform: 'uppercase' }}>Artilheiro da Copa</div>
