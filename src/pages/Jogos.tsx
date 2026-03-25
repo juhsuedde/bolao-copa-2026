@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../hooks/useAuth';
 import ModalPalpite from '../components/ModalPalpite';
+import ModalResultadoJogo from '../components/ModalResultadoJogo';
 
 export type Match = {
   id: string;
@@ -62,6 +63,7 @@ export default function Jogos() {
   const [userPicks, setUserPicks] = useState<Record<string, Pick>>({});
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isResultModalOpen, setIsResultModalOpen] = useState(false);
   const [selectedMatch, setSelectedMatch] = useState<Match | null>(null);
   const [currentTime, setCurrentTime] = useState(new Date().getTime());
   const [filter, setFilter] = useState<Filter>('hoje');
@@ -133,7 +135,19 @@ export default function Jogos() {
   }, [isGroupStageOver, filter]);
 
   const openModal = (match: Match) => {
+    const finished = match.home_score !== null && match.away_score !== null;
+
+    // Se o jogo terminou, abre o modal de resultados
+    if (finished) {
+      setSelectedMatch(match);
+      setIsResultModalOpen(true);
+      return;
+    }
+
+    // Se o jogo está travado (já começou), não permite palpite
     if (isMatchLocked(match.match_date)) return;
+
+    // Abre o modal de palpite
     setSelectedMatch(match);
     setIsModalOpen(true);
   };
@@ -263,7 +277,7 @@ export default function Jogos() {
         onClick={() => openModal(match)}
         className={`bg-bolao-bg-card border rounded-[9px] px-3 py-[9px] transition-colors ${
           pick ? 'border-l-[3px] border-bolao-green-mid' : 'border-bolao-border'
-        } ${locked ? 'opacity-70' : 'cursor-pointer active:bg-gray-50'}`}
+        } ${finished ? 'cursor-pointer active:bg-gray-50 border-bolao-green-mid/50' : locked ? 'opacity-70' : 'cursor-pointer active:bg-gray-50'}`}
       >
         <div className="flex justify-between items-center mb-[7px]">
           <span className="text-[10px] font-semibold text-bolao-muted tracking-[0.07em] uppercase">
@@ -321,7 +335,14 @@ export default function Jogos() {
 
         <div className="flex items-center justify-between mt-[7px] pt-[6px] border-t border-bolao-border">
           <div className="flex items-center gap-2">
-            {pick ? (
+            {finished ? (
+              <span className="text-[11px] text-bolao-green font-semibold flex items-center gap-1">
+                <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
+                </svg>
+                Ver palpites →
+              </span>
+            ) : pick ? (
               <span className="text-[11px] text-bolao-muted">
                 Palpite: <strong className="text-bolao-text font-mono">{pick.home_score}–{pick.away_score}</strong>
               </span>
@@ -444,6 +465,14 @@ export default function Jogos() {
           match={selectedMatch}
           currentPick={userPicks[selectedMatch.id] || null}
           onSave={handleSavePick}
+        />
+      )}
+
+      {selectedMatch && (
+        <ModalResultadoJogo
+          isOpen={isResultModalOpen}
+          onClose={() => setIsResultModalOpen(false)}
+          match={selectedMatch}
         />
       )}
     </div>
