@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { BrowserRouter, Routes, Route, useNavigate, useLocation } from 'react-router-dom';
 import { AuthProvider, useAuth } from './hooks/useAuth';
 import Login from './pages/Login';
 import Home from './pages/Home';
@@ -6,12 +6,44 @@ import Jogos from './pages/Jogos';
 import Especiais from './pages/Especiais';
 import Ranking from './pages/Ranking';
 import BottomNav from './layout/BottomNav';
+import type { Tab } from './types';
 
-export type Tab = 'home' | 'jogos' | 'especiais' | 'ranking';
+function TabNavigator({ children }: { children: React.ReactNode }) {
+  const navigate = useNavigate();
+  const location = useLocation();
+
+  const getCurrentTab = (): Tab => {
+    const path = location.pathname;
+    if (path === '/') return 'home';
+    if (path.startsWith('/jogos')) return 'jogos';
+    if (path.startsWith('/especiais')) return 'especiais';
+    if (path.startsWith('/ranking')) return 'ranking';
+    return 'home';
+  };
+
+  const handleTabChange = (tab: Tab) => {
+    switch (tab) {
+      case 'home': navigate('/'); break;
+      case 'jogos': navigate('/jogos'); break;
+      case 'especiais': navigate('/especiais'); break;
+      case 'ranking': navigate('/ranking'); break;
+    }
+  };
+
+  return (
+    <div className="min-h-screen bg-gray-200 flex justify-center">
+      <div className="w-full max-w-md bg-bolao-bg min-h-screen shadow-2xl relative flex flex-col">
+        <main className="flex-1 pb-24">
+          {children}
+        </main>
+        <BottomNav currentTab={getCurrentTab()} onChangeTab={handleTabChange} />
+      </div>
+    </div>
+  );
+}
 
 function AppContent() {
   const { user, loading } = useAuth();
-  const [activeTab, setActiveTab] = useState<Tab>('home');
 
   if (loading) {
     return (
@@ -23,32 +55,24 @@ function AppContent() {
 
   if (!user) return <Login />;
 
-  const renderTabContent = () => {
-    switch (activeTab) {
-      case 'home': return <Home />;
-      case 'jogos': return <Jogos />;
-      case 'especiais': return <Especiais />;
-      case 'ranking': return <Ranking />;
-      default: return <Home />;
-    }
-  };
-
   return (
-    <div className="min-h-screen bg-gray-200 flex justify-center">
-      <div className="w-full max-w-md bg-bolao-bg min-h-screen shadow-2xl relative flex flex-col">
-        <main className="flex-1 pb-24">
-          {renderTabContent()}
-        </main>
-        <BottomNav currentTab={activeTab} onChangeTab={setActiveTab} />
-      </div>
-    </div>
+    <TabNavigator>
+      <Routes>
+        <Route path="/" element={<Home />} />
+        <Route path="/jogos" element={<Jogos />} />
+        <Route path="/especiais" element={<Especiais />} />
+        <Route path="/ranking" element={<Ranking />} />
+      </Routes>
+    </TabNavigator>
   );
 }
 
 export default function App() {
   return (
-    <AuthProvider>
-      <AppContent />
-    </AuthProvider>
+    <BrowserRouter>
+      <AuthProvider>
+        <AppContent />
+      </AuthProvider>
+    </BrowserRouter>
   );
 }

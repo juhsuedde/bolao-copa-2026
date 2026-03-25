@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
-import type { Match } from '../pages/Jogos';
+import type { Match } from '../types';
 
 type UserPick = {
   user_id: string;
@@ -12,7 +12,7 @@ type UserPick = {
   user: { name: string; avatar_url: string | null };
 };
 
-type ModalResultadoJogoProps = {
+type Props = {
   isOpen: boolean;
   onClose: () => void;
   match: Match | null;
@@ -20,21 +20,14 @@ type ModalResultadoJogoProps = {
 
 const AVATARS = ['🦁', '🐯', '🦊', '⚡', '🌙', '🎯', '🔥', '🐉', '🦅', '🌟'];
 
-export default function ModalResultadoJogo({ isOpen, onClose, match }: ModalResultadoJogoProps) {
+export default function ModalResultadoJogo({ isOpen, onClose, match }: Props) {
   const [picks, setPicks] = useState<UserPick[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (isOpen && match) {
-      fetchPicks();
-    }
-  }, [isOpen, match]);
-
-  const fetchPicks = async () => {
-    if (!match) return;
+    if (!isOpen || !match) return;
     setLoading(true);
-
-    const { data, error } = await supabase
+    supabase
       .from('match_picks')
       .select(`
         user_id,
@@ -43,160 +36,149 @@ export default function ModalResultadoJogo({ isOpen, onClose, match }: ModalResu
         points,
         extra_time_winner,
         penalties_winner,
-        user:users(name, avatar_url)
+        user:user_id(name, avatar_url)
       `)
       .eq('match_id', match.id)
-      .order('points', { ascending: false });
-
-    if (error) {
-      console.error('Erro ao buscar palpites:', error);
-    } else {
-      setPicks(data as unknown as UserPick[]);
-    }
-    setLoading(false);
-  };
+      .order('points', { ascending: false })
+      .then(({ data, error }) => {
+        if (error) console.error('Erro ao buscar palpites:', error);
+        else setPicks(data as unknown as UserPick[]);
+        setLoading(false);
+      });
+  }, [isOpen, match]);
 
   if (!isOpen || !match) return null;
 
   const isKnockout = match.stage !== 'group_stage';
 
-  const getPtsText = (points: number) => {
-    if (points >= 8) return `+${points} pts · exato!`;
-    if (points > 0) return `+${points} pts`;
-    return '0 pts';
+  // Pontuação máxima possível depende da fase
+  const maxExact = isKnockout ? 10 : 8;
+  const winnerPts = isKnockout ? 4 : 3;
+
+  const getPtsBadge = (points: number) => {
+    if (points === 0) return (
+      <span className="text-[10px] font-bold bg-bolao-red-light text-bolao-red px-2 py-1 rounded-full">
+        0 pts
+      </span>
+    );
+    if (points >= maxExact) return (
+      <span className="text-[10px] font-bold bg-bolao-green-light text-bolao-green px-2 py-1 rounded-full">
+        +{points} pts · exato!
+      </span>
+    );
+    return (
+      <span className="text-[10px] font-bold bg-bolao-green-light text-bolao-green px-2 py-1 rounded-full">
+        +{points} pts
+      </span>
+    );
   };
+
+  const stageLabel = isKnockout
+    ? (match.stage.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()))
+    : match.home?.group_name
+    ? `Grupo ${match.home.group_name}`
+    : 'Fase de grupos';
 
   return (
     <>
-      <div
-        className="fixed inset-0 bg-bolao-text/60 backdrop-blur-sm z-40 transition-opacity"
-        onClick={onClose}
-      />
+      <div className="fixed inset-0 bg-bolao-text/60 backdrop-blur-sm z-40" onClick={onClose} />
 
-      <div className="fixed inset-x-0 bottom-0 z-50 transform transition-transform">
-        <div className="bg-bolao-bg rounded-t-3xl pt-2 px-5 pb-8 shadow-2xl relative max-h-[85vh] overflow-y-auto">
+      <div className="fixed inset-x-0 bottom-0 z-50">
+        <div className="bg-bolao-bg rounded-t-3xl pt-2 px-5 pb-8 shadow-2xl max-h-[85vh] overflow-y-auto">
 
-          <div className="w-12 h-1 bg-bolao-border rounded-full mx-auto mb-6 opacity-60" />
+          <div className="w-12 h-1 bg-bolao-border rounded-full mx-auto mb-5 opacity-60" />
 
           {/* Header */}
-          <div className="flex justify-between items-start mb-6">
+          <div className="flex justify-between items-start mb-5">
             <div>
-              <h2 className="text-sm font-display uppercase tracking-widest text-bolao-text mb-1">
-                Resultado do Jogo
+              <h2 className="text-sm font-display uppercase tracking-widest text-bolao-text">
+                Resultado do jogo
               </h2>
-              <p className="text-[10px] text-bolao-muted">
-                Palpites de {picks.length} participante{picks.length !== 1 ? 's' : ''}
+              <p className="text-[10px] text-bolao-muted mt-0.5">
+                {picks.length} palpite{picks.length !== 1 ? 's' : ''} registrado{picks.length !== 1 ? 's' : ''}
               </p>
             </div>
-            <button onClick={onClose} className="p-2 -mr-2 text-bolao-muted hover:text-bolao-text">
+            <button onClick={onClose} className="p-2 -mr-2 text-bolao-muted">
               <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
               </svg>
             </button>
           </div>
 
-          {/* Card do Jogo */}
-          <div className="bg-bolao-bg-card border border-bolao-border rounded-2xl p-5 mb-6">
-            <div className="text-center mb-4">
+          {/* Card do jogo */}
+          <div className="bg-bolao-bg-card border border-bolao-border rounded-2xl p-4 mb-5">
+            <div className="text-center mb-3">
               <span className="text-[10px] font-semibold text-bolao-muted tracking-[0.07em] uppercase">
-                {isKnockout
-                  ? match.stage.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())
-                  : match.home?.group_name
-                  ? `Grupo ${match.home.group_name}`
-                  : 'Fase de Grupos'}
+                {stageLabel}
               </span>
             </div>
-
-            <div className="flex items-center justify-between gap-4">
-              {/* Time da Casa */}
-              <div className="flex-1 flex flex-col items-center">
+            <div className="flex items-center justify-between gap-2">
+              <div className="flex-1 flex flex-col items-center gap-2">
                 {match.home?.flag_url ? (
-                  <img
-                    src={match.home.flag_url}
-                    alt={match.home.name}
-                    className="w-12 h-8 object-cover rounded shadow-sm border border-bolao-border mb-3"
-                  />
-                ) : (
-                  <span className="text-3xl mb-3">⚽</span>
-                )}
-                <span className="text-xs font-semibold text-center leading-tight truncate w-full">
+                  <img src={match.home.flag_url} alt={match.home.name} className="w-11 h-8 object-cover rounded shadow-sm border border-bolao-border" />
+                ) : <span className="text-3xl">⚽</span>}
+                <span className="text-[11px] font-semibold text-center leading-tight">
                   {match.home?.name || match.home_team}
                 </span>
               </div>
 
-              {/* Placar */}
-              <div className="flex flex-col items-center px-4">
+              <div className="flex flex-col items-center gap-1">
                 <div className="bg-bolao-bg rounded-xl px-4 py-2 border border-bolao-border">
                   <span className="font-mono text-2xl font-bold text-bolao-text">
-                    {match.home_score ?? '-'}
+                    {match.home_score}
                     <span className="text-bolao-muted text-sm mx-1">x</span>
-                    {match.away_score ?? '-'}
+                    {match.away_score}
                   </span>
                 </div>
-                <span className="text-[9px] text-bolao-green font-semibold mt-2 uppercase tracking-wider">
+                <span className="text-[9px] text-bolao-green font-semibold uppercase tracking-wider">
                   Finalizado
                 </span>
               </div>
 
-              {/* Time Visitante */}
-              <div className="flex-1 flex flex-col items-center">
+              <div className="flex-1 flex flex-col items-center gap-2">
                 {match.away?.flag_url ? (
-                  <img
-                    src={match.away.flag_url}
-                    alt={match.away.name}
-                    className="w-12 h-8 object-cover rounded shadow-sm border border-bolao-border mb-3"
-                  />
-                ) : (
-                  <span className="text-3xl mb-3">⚽</span>
-                )}
-                <span className="text-xs font-semibold text-center leading-tight truncate w-full">
+                  <img src={match.away.flag_url} alt={match.away.name} className="w-11 h-8 object-cover rounded shadow-sm border border-bolao-border" />
+                ) : <span className="text-3xl">⚽</span>}
+                <span className="text-[11px] font-semibold text-center leading-tight">
                   {match.away?.name || match.away_team}
                 </span>
               </div>
             </div>
           </div>
 
-          {/* Lista de Palpites */}
-          <div>
-            <h3 className="text-[11px] font-bold text-bolao-text uppercase tracking-widest mb-3">
-              Palpites dos Participantes
+          {/* Lista de palpites */}
+          <div className="mb-4">
+            <h3 className="text-[10px] font-bold text-bolao-muted uppercase tracking-widest mb-3">
+              Palpites dos participantes
             </h3>
 
             {loading ? (
-              <div className="text-center py-8 text-bolao-muted text-sm">
-                Carregando palpites...
-              </div>
+              <div className="text-center py-8 text-bolao-muted text-sm">Carregando...</div>
             ) : picks.length === 0 ? (
               <div className="text-center py-8 text-bolao-muted text-sm border border-dashed border-bolao-border rounded-xl">
-                Nenhum palpite registrado para este jogo.
+                Nenhum palpite registrado.
               </div>
             ) : (
               <div className="flex flex-col gap-2">
                 {picks.map((pick, index) => (
                   <div
                     key={pick.user_id}
-                    className="bg-bolao-bg-card border border-bolao-border rounded-xl p-3 flex items-center gap-3"
+                    className="bg-bolao-bg-card border border-bolao-border rounded-xl px-3 py-2.5 flex items-center gap-3"
                   >
                     {/* Posição */}
-                    <div className="w-5 text-center">
-                      <span className={`text-[11px] font-bold ${
-                        index === 0 ? 'text-yellow-600' :
-                        index === 1 ? 'text-gray-500' :
-                        index === 2 ? 'text-amber-700' :
-                        'text-bolao-muted'
-                      }`}>
-                        {index + 1}
-                      </span>
-                    </div>
+                    <span className={`text-[11px] font-bold w-4 text-center shrink-0 ${
+                      index === 0 ? 'text-yellow-600' :
+                      index === 1 ? 'text-gray-400' :
+                      index === 2 ? 'text-amber-700' :
+                      'text-bolao-muted'
+                    }`}>
+                      {index + 1}
+                    </span>
 
                     {/* Avatar */}
-                    <div className="w-8 h-8 rounded-full bg-bolao-bg3 border border-bolao-border flex items-center justify-center text-sm flex-shrink-0">
+                    <div className="w-8 h-8 rounded-full bg-bolao-bg border border-bolao-border flex items-center justify-center text-sm shrink-0 overflow-hidden">
                       {pick.user?.avatar_url ? (
-                        <img
-                          src={pick.user.avatar_url}
-                          alt=""
-                          className="w-full h-full object-cover rounded-full"
-                        />
+                        <img src={pick.user.avatar_url} alt="" className="w-full h-full object-cover" />
                       ) : (
                         AVATARS[pick.user_id.charCodeAt(0) % AVATARS.length]
                       )}
@@ -210,26 +192,13 @@ export default function ModalResultadoJogo({ isOpen, onClose, match }: ModalResu
                     </div>
 
                     {/* Palpite */}
-                    <div className="flex items-center gap-2">
-                      <span className="font-mono text-sm text-bolao-muted">
-                        {pick.home_score} x {pick.away_score}
-                      </span>
-                      {isKnockout && pick.extra_time_winner && (
-                        <span className="text-[9px] text-bolao-muted bg-bolao-bg rounded px-1.5 py-0.5 border border-bolao-border">
-                          +ET
-                        </span>
-                      )}
-                    </div>
+                    <span className="font-mono text-[12px] text-bolao-muted shrink-0">
+                      {pick.home_score}–{pick.away_score}
+                    </span>
 
-                    {/* Pontuação */}
-                    <div className={`text-[10px] font-bold px-2.5 py-1 rounded-full ${
-                      pick.points >= 8
-                        ? 'bg-bolao-green-light text-bolao-green'
-                        : pick.points > 0
-                        ? 'bg-bolao-green-light text-bolao-green'
-                        : 'bg-bolao-red-light text-bolao-red'
-                    }`}>
-                      {getPtsText(pick.points)}
+                    {/* Badge de pontuação */}
+                    <div className="shrink-0">
+                      {getPtsBadge(pick.points)}
                     </div>
                   </div>
                 ))}
@@ -237,21 +206,19 @@ export default function ModalResultadoJogo({ isOpen, onClose, match }: ModalResu
             )}
           </div>
 
-          {/* Legenda de Pontuação */}
-          <div className="mt-6 pt-4 border-t border-bolao-border">
-            <div className="flex flex-wrap gap-3 justify-center">
-              <div className="flex items-center gap-1.5">
-                <span className="w-2 h-2 rounded-full bg-bolao-green"></span>
-                <span className="text-[10px] text-bolao-muted">Placar exato (+8 pts)</span>
-              </div>
-              <div className="flex items-center gap-1.5">
-                <span className="w-2 h-2 rounded-full bg-bolao-green-light border border-bolao-green-mid"></span>
-                <span className="text-[10px] text-bolao-muted">Vencedor (+3 pts)</span>
-              </div>
-              <div className="flex items-center gap-1.5">
-                <span className="w-2 h-2 rounded-full bg-bolao-red"></span>
-                <span className="text-[10px] text-bolao-muted">Erro (0 pts)</span>
-              </div>
+          {/* Legenda */}
+          <div className="pt-4 border-t border-bolao-border flex flex-wrap gap-x-4 gap-y-2 justify-center">
+            <div className="flex items-center gap-1.5">
+              <span className="w-2 h-2 rounded-full bg-bolao-green inline-block" />
+              <span className="text-[10px] text-bolao-muted">Exato (+{maxExact} pts)</span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <span className="w-2 h-2 rounded-full bg-bolao-green-mid inline-block" />
+              <span className="text-[10px] text-bolao-muted">Vencedor (+{winnerPts} pts)</span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <span className="w-2 h-2 rounded-full bg-bolao-red inline-block" />
+              <span className="text-[10px] text-bolao-muted">Erro (0 pts)</span>
             </div>
           </div>
 

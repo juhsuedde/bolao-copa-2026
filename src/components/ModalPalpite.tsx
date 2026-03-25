@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import type { Match } from '../pages/Jogos';
+import type { Match } from '../types';
 
 type ModalPalpiteProps = {
   isOpen: boolean;

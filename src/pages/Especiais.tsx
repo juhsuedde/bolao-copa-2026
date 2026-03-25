@@ -18,11 +18,28 @@ function abbrev(name: string | null): string {
     'República Checa': 'TCH',
     'Bósnia e Herzegovina': 'BIH',
     'Trinidad e Tobago': 'TRI',
+    'Coreia do Norte': 'PRK',
+    'Nova Zelândia': 'NZL',
+    'África do Sul': 'RSA',
   };
   if (overrides[name]) return overrides[name];
-  // Remove artigos e preposições, pega as 3 primeiras letras da primeira palavra significativa
   const clean = name.replace(/^(da |de |do |das |dos |the )/i, '');
   return clean.slice(0, 3).toUpperCase();
+}
+
+// Função auxiliar para calcular o tempo restante
+function timeUntil(date: Date): string {
+  const now = new Date();
+  const diff = date.getTime() - now.getTime();
+  if (diff <= 0) return '';
+  
+  const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+  const hours = Math.floor((diff / (1000 * 60 * 60)) % 24);
+  const minutes = Math.floor((diff / 1000 / 60) % 60);
+
+  if (days > 0) return `${days}d ${hours}h`;
+  if (hours > 0) return `${hours}h ${minutes}m`;
+  return `${minutes}m`;
 }
 
 export default function Especiais() {
@@ -31,6 +48,8 @@ export default function Especiais() {
   const [picks, setPicks] = useState<Record<string, SpecialPick>>({});
   const [loading, setLoading] = useState(true);
   const [isGroupsExpanded, setIsGroupsExpanded] = useState(false);
+  const [deadline, setDeadline] = useState('');
+  const [firstMatchDate, setFirstMatchDate] = useState<Date | null>(null);
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [modalConfig, setModalConfig] = useState({
@@ -41,14 +60,28 @@ export default function Especiais() {
     filterGroup: null as string | null,
   });
 
+  // Atualiza o chip de prazo a cada minuto se a data do primeiro jogo já foi carregada
+  useEffect(() => {
+    if (!firstMatchDate) return;
+    
+    const update = () => setDeadline(timeUntil(firstMatchDate));
+    update(); // Chamada inicial
+    
+    const timer = setInterval(update, 60_000);
+    return () => clearInterval(timer);
+  }, [firstMatchDate]);
+
   const fetchData = useCallback(async () => {
     if (!user) return;
     setLoading(true);
     try {
+      // 1. Busca os times e ignora os placeholders do mata-mata (group_name = '-')
       const { data: teamsData, error: teamsError } = await supabase
         .from('teams')
         .select('id, name, group_name, flag_url')
+        .neq('group_name', '-') // Esconde o mata-mata dos modais de grupos
         .order('name');
+        
       if (teamsError) console.error('Erro ao buscar times:', teamsError);
       if (teamsData) {
         setTeams(teamsData.map(t => ({
@@ -59,16 +92,31 @@ export default function Especiais() {
         })));
       }
 
+      // 2. Busca os palpites especiais do usuário
       const { data: picksData, error: picksError } = await supabase
         .from('special_picks')
         .select('pick_category, team_id, pick_text')
         .eq('user_id', user.id);
+        
       if (picksError) console.error('Erro ao buscar palpites:', picksError);
       if (picksData) {
         const map: Record<string, SpecialPick> = {};
         picksData.forEach(p => { map[p.pick_category] = p; });
         setPicks(map);
       }
+
+      // 3. Busca a data do primeiro jogo para o countdown
+      const { data: firstMatchData } = await supabase
+        .from('matches')
+        .select('match_date')
+        .order('match_date', { ascending: true })
+        .limit(1)
+        .single();
+        
+      if (firstMatchData?.match_date) {
+        setFirstMatchDate(new Date(firstMatchData.match_date));
+      }
+
     } catch (err) {
       console.error('Erro geral na busca:', err);
     } finally {
@@ -108,11 +156,8 @@ export default function Especiais() {
   const getTeamByCategory = (category: string) =>
     getTeamById(picks[category]?.team_id ?? null);
 
-  // Status badge para linha de grupo: ok / no / pend / add
-  const getGroupPickStatus = (teamId: string | null | undefined): 'ok' | 'no' | 'pend' | 'add' => {
-    if (!teamId) return 'add';
-    // Futuramente: comparar com resultado real do grupo
-    // Por ora: se tem palpite, mostra pend (aguardando) ou ok/no quando resultado disponível
+  const getGroupPickStatus = (_teamId: string | null | undefined): 'ok' | 'no' | 'pend' | 'add' => {
+    if (!_teamId) return 'add';
     return 'pend';
   };
 
@@ -124,6 +169,14 @@ export default function Especiais() {
     return { value: '--', hasValue: false };
   };
 
+  // Chip de prazo: mostra contagem regressiva antes da Copa, some depois
+  const isBeforeCopa = firstMatchDate ? new Date() < firstMatchDate : false;
+  const deadlineChip = isBeforeCopa && deadline
+    ? `fecha em ${deadline}`
+    : isBeforeCopa
+    ? 'em breve'
+    : null;
+
   if (loading) return (
     <div className="p-10 text-center uppercase font-display text-xs tracking-widest text-bolao-muted">
       Carregando...
@@ -133,10 +186,9 @@ export default function Especiais() {
   return (
     <div className="flex flex-col gap-5 pb-24">
 
-      {/* Header */}
       <div className="screen-header">
         <div className="screen-title">Especiais</div>
-        <div className="hchip gold">fecha em 2d 14h</div>
+        {deadlineChip && <div className="hchip gold">{deadlineChip}</div>}
       </div>
 
       <div className="esplist">
@@ -229,11 +281,13 @@ export default function Especiais() {
           {(['finalist_1', 'finalist_2'] as const).map((cat, i) => {
             const team = getTeamByCategory(cat);
             const isEmpty = !team;
+            const finalist1Chosen = !!getTeamByCategory('finalist_1');
             return (
-              <div key={cat} className="epick" onClick={() => openModal(
-                i === 0 ? 'Finalista 1' : 'Finalista 2', cat, 'team'
-              )}
-                style={{ opacity: i === 1 && !getTeamByCategory('finalist_1') ? 0.5 : 1 }}
+              <div
+                key={cat}
+                className="epick"
+                onClick={() => openModal(i === 0 ? 'Finalista 1' : 'Finalista 2', cat, 'team')}
+                style={{ opacity: i === 1 && !finalist1Chosen ? 0.5 : 1 }}
               >
                 <div className={`eflag ${isEmpty ? 'empty' : ''}`}>
                   {team?.flag_url
