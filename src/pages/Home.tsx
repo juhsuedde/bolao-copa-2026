@@ -157,7 +157,7 @@ export default function Home() {
             <span className="text-lg">⏳</span>
             <div>
               <div className="text-[11px] font-bold text-bolao-text tracking-wide uppercase">A Copa ainda não começou</div>
-              <div className="text-[11px] text-bolao-muted mt-0.5">Aproveite para fazer seus palpites antes do 1º jogo!</div>
+              <div className="text-[11px] text-bolao-muted mt-0.5">Vocês começarão a pontuar assim que a bola rolar!</div>
             </div>
           </div>
           <div className="flex flex-col gap-2">
@@ -165,14 +165,14 @@ export default function Home() {
               <span className="text-bolao-green font-bold text-sm mt-0.5">⚽</span>
               <div>
                 <div className="text-[12px] font-semibold text-bolao-text">Aba Jogos</div>
-                <div className="text-[11px] text-bolao-muted">10 minutos antes de cada partida os palpites travam.</div>
+                <div className="text-[11px] text-bolao-muted">Pode palpitar quando quiser, mas 10 minutos antes de cada partida os jogos travam.</div>
               </div>
             </div>
             <div className="flex items-start gap-2">
               <span className="text-bolao-gold font-bold text-sm mt-0.5">★</span>
               <div>
                 <div className="text-[12px] font-semibold text-bolao-text">Aba Especiais</div>
-                <div className="text-[11px] text-bolao-muted">Vote em quais serão os classifados por grupo, os times que estarão na final, quem será o campeão e quem será o artilheiro da Copa.</div>
+                <div className="text-[11px] text-bolao-muted">Vote nos classifados por grupo, times da final, campeão e artilheiro da Copa antes do primeiro jogo começar.</div>
               </div>
             </div>
           </div>

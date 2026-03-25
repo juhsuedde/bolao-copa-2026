@@ -365,9 +365,13 @@ export default function Jogos() {
             <button
               key={f}
               onClick={() => {
-                setFilter(f);
-                if (f !== 'grupos') setGroupFilter(null);
-              }}
+                    setFilter(f);
+                    if (f === 'grupos') {
+                        setGroupFilter('A');
+                    } else {
+                        setGroupFilter(null);
+                    }
+                    }}
               className={`flex-shrink-0 px-[13px] py-[6px] rounded-full text-[11px] font-semibold border transition-all ${
                 isActive && isDefault
                   ? 'bg-bolao-green text-white border-bolao-green'
