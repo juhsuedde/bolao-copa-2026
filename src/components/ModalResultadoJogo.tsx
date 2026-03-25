@@ -246,11 +246,11 @@ export default function ModalResultadoJogo({ isOpen, onClose, match }: ModalResu
               </div>
               <div className="flex items-center gap-1.5">
                 <span className="w-2 h-2 rounded-full bg-bolao-green-light border border-bolao-green-mid"></span>
-                <span className="text-[10px] text-bolao-muted">Parcial (+3 a +5 pts)</span>
+                <span className="text-[10px] text-bolao-muted">Vencedor (+3 pts)</span>
               </div>
               <div className="flex items-center gap-1.5">
                 <span className="w-2 h-2 rounded-full bg-bolao-red"></span>
-                <span className="text-[10px] text-bolao-muted">Errou (0 pts)</span>
+                <span className="text-[10px] text-bolao-muted">Erro (0 pts)</span>
               </div>
             </div>
           </div>
