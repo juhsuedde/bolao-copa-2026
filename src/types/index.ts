@@ -22,8 +22,6 @@ export type Pick = {
 export type Filter = 'proximos' | 'hoje' | 'grupos' | 'todos';
 export type GroupFilter = string | null;
 
-export type Tab = 'home' | 'jogos' | 'especiais' | 'ranking';
-
 export const STAGE_LABELS: Record<string, string> = {
   round_of_16:    'Oitavas de Final',
   quarter_finals: 'Quartas de Final',

@@ -1,13 +1,30 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { supabase } from '../lib/supabase';
+import { useUserRole } from '../hooks/useUserRole';
+import { useToast } from '../hooks/useToast';
+
+interface MatchData {
+  id: string;
+  date: string;
+  home_score: number | null;
+  away_score: number | null;
+  stage: string;
+  home: { name: string };
+  away: { name: string };
+}
+
+interface MatchInput {
+  home: number;
+  away: number;
+}
 
 export default function Admin() {
-  const [matches, setMatches] = useState<any[]>([]);
+  const { isAdmin, loading: roleLoading } = useUserRole();
+  const { showToast } = useToast();
+  const [matches, setMatches] = useState<MatchData[]>([]);
   const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    fetchMatches();
-  }, []);
+  const [saving, setSaving] = useState<string | null>(null);
+  const inputsRef = useRef<Record<string, MatchInput>>({});
 
   async function fetchMatches() {
     setLoading(true);
@@ -20,29 +37,62 @@ export default function Admin() {
       `)
       .order('date', { ascending: true });
 
-    if (data) setMatches(data);
+    if (data) setMatches(data as unknown as MatchData[]);
     if (error) console.error(error);
     setLoading(false);
   }
 
-  async function updateMatch(id: string, home: number, away: number, stage: string) {
+  useEffect(() => {
+    fetchMatches();
+  }, []);
+
+  useEffect(() => {
+    const initialInputs: Record<string, MatchInput> = {};
+    matches.forEach(m => {
+      initialInputs[m.id] = { home: m.home_score ?? 0, away: m.away_score ?? 0 };
+    });
+    inputsRef.current = initialInputs;
+  }, [matches]);
+
+  async function updateMatch(id: string) {
+    const input = inputsRef.current[id];
+    if (!input) return;
+
+    setSaving(id);
     const { error } = await supabase
       .from('matches')
-      .update({ home_score: home, away_score: away, stage: stage })
+      .update({ home_score: input.home, away_score: input.away })
       .eq('id', id);
 
-    if (error) alert("Erro: " + error.message);
-    else {
-      alert("Resultado atualizado! Os pontos serão calculados via Trigger.");
+    if (error) {
+      showToast('Erro: ' + error.message, 'error');
+    } else {
+      showToast('Resultado atualizado com sucesso!', 'success');
       fetchMatches();
     }
+    setSaving(null);
+  }
+
+  if (roleLoading) {
+    return <div className="p-10">Verificando permissões...</div>;
+  }
+
+  if (!isAdmin) {
+    return (
+      <div className="p-6 pb-20 bg-white min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <h1 className="text-2xl font-bold mb-4 text-gray-800">Acesso Negado</h1>
+          <p className="text-gray-600">Você não tem permissão para acessar esta página.</p>
+        </div>
+      </div>
+    );
   }
 
   if (loading) return <div className="p-10">Carregando painel de controle...</div>;
 
   return (
     <div className="p-6 pb-20 bg-white min-h-screen">
-      <h1 className="text-2xl font-bold mb-6 text-gray-800">Painel do Juiz ⚖️</h1>
+      <h1 className="text-2xl font-bold mb-6 text-gray-800">Painel do Juiz</h1>
       
       <div className="flex flex-col gap-6">
         {matches.map((m) => (
@@ -58,15 +108,29 @@ export default function Admin() {
               <div className="flex gap-2">
                 <input 
                   type="number" 
-                  defaultValue={m.home_score} 
-                  id={`home-${m.id}`}
+                  value={inputsRef.current[m.id]?.home ?? 0}
+                  onChange={(e) => {
+                    const val = parseInt(e.target.value) || 0;
+                    inputsRef.current = {
+                      ...inputsRef.current,
+                      [m.id]: { ...inputsRef.current[m.id], home: val }
+                    };
+                    setMatches(prev => prev);
+                  }}
                   className="w-12 h-10 border rounded text-center font-bold"
                 />
                 <span className="self-center">x</span>
                 <input 
                   type="number" 
-                  defaultValue={m.away_score} 
-                  id={`away-${m.id}`}
+                  value={inputsRef.current[m.id]?.away ?? 0}
+                  onChange={(e) => {
+                    const val = parseInt(e.target.value) || 0;
+                    inputsRef.current = {
+                      ...inputsRef.current,
+                      [m.id]: { ...inputsRef.current[m.id], away: val }
+                    };
+                    setMatches(prev => prev);
+                  }}
                   className="w-12 h-10 border rounded text-center font-bold"
                 />
               </div>
@@ -75,14 +139,11 @@ export default function Admin() {
             </div>
 
             <button 
-              onClick={() => {
-                const h = (document.getElementById(`home-${m.id}`) as HTMLInputElement).value;
-                const a = (document.getElementById(`away-${m.id}`) as HTMLInputElement).value;
-                updateMatch(m.id, parseInt(h), parseInt(a), m.stage);
-              }}
-              className="w-full mt-4 bg-gray-800 text-white py-2 rounded-md text-sm font-semibold hover:bg-black transition-colors"
+              onClick={() => updateMatch(m.id)}
+              disabled={saving === m.id}
+              className="w-full mt-4 bg-gray-800 text-white py-2 rounded-md text-sm font-semibold hover:bg-black transition-colors disabled:opacity-50"
             >
-              Salvar Resultado Oficial
+              {saving === m.id ? 'Salvando...' : 'Salvar Resultado Oficial'}
             </button>
           </div>
         ))}

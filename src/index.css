@@ -331,3 +331,12 @@
 .gpb.no   { background: var(--red-light);   color: var(--red);   border-color: #F0B0AA; }
 .gpb.pend { background: var(--bg3);         color: var(--muted); }
 .gpb.add  { background: var(--bg3);         color: var(--muted); font-size: 13px; line-height: 1; }
+
+@keyframes slide-down {
+  from { transform: translateY(-20px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+.animate-slide-down {
+  animation: slide-down 0.3s ease-out;
+}

@@ -1,14 +1,17 @@
 import { BrowserRouter, Routes, Route, useNavigate, useLocation } from 'react-router-dom';
 import { AuthProvider, useAuth } from './hooks/useAuth';
+import { ToastProvider } from './hooks/useToast';
+import { useUserRole } from './hooks/useUserRole';
 import Login from './pages/Login';
 import Home from './pages/Home';
 import Jogos from './pages/Jogos';
 import Especiais from './pages/Especiais';
 import Ranking from './pages/Ranking';
+import Admin from './pages/Admin';
 import BottomNav from './layout/BottomNav';
-import type { Tab } from './types';
+import type { Tab } from './layout/BottomNav';
 
-function TabNavigator({ children }: { children: React.ReactNode }) {
+function TabNavigator({ children, showAdmin }: { children: React.ReactNode; showAdmin: boolean }) {
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -18,6 +21,7 @@ function TabNavigator({ children }: { children: React.ReactNode }) {
     if (path.startsWith('/jogos')) return 'jogos';
     if (path.startsWith('/especiais')) return 'especiais';
     if (path.startsWith('/ranking')) return 'ranking';
+    if (path.startsWith('/admin')) return 'admin';
     return 'home';
   };
 
@@ -27,6 +31,7 @@ function TabNavigator({ children }: { children: React.ReactNode }) {
       case 'jogos': navigate('/jogos'); break;
       case 'especiais': navigate('/especiais'); break;
       case 'ranking': navigate('/ranking'); break;
+      case 'admin': navigate('/admin'); break;
     }
   };
 
@@ -36,7 +41,7 @@ function TabNavigator({ children }: { children: React.ReactNode }) {
         <main className="flex-1 pb-24">
           {children}
         </main>
-        <BottomNav currentTab={getCurrentTab()} onChangeTab={handleTabChange} />
+        <BottomNav currentTab={getCurrentTab()} onChangeTab={handleTabChange} showAdmin={showAdmin} />
       </div>
     </div>
   );
@@ -44,6 +49,7 @@ function TabNavigator({ children }: { children: React.ReactNode }) {
 
 function AppContent() {
   const { user, loading } = useAuth();
+  const { isAdmin } = useUserRole();
 
   if (loading) {
     return (
@@ -56,12 +62,13 @@ function AppContent() {
   if (!user) return <Login />;
 
   return (
-    <TabNavigator>
+    <TabNavigator showAdmin={isAdmin}>
       <Routes>
         <Route path="/" element={<Home />} />
         <Route path="/jogos" element={<Jogos />} />
         <Route path="/especiais" element={<Especiais />} />
         <Route path="/ranking" element={<Ranking />} />
+        <Route path="/admin" element={<Admin />} />
       </Routes>
     </TabNavigator>
   );
@@ -71,7 +78,9 @@ export default function App() {
   return (
     <BrowserRouter>
       <AuthProvider>
-        <AppContent />
+        <ToastProvider>
+          <AppContent />
+        </ToastProvider>
       </AuthProvider>
     </BrowserRouter>
   );

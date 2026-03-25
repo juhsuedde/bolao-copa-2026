@@ -1,14 +1,15 @@
-type Tab = 'home' | 'jogos' | 'especiais' | 'ranking';
+export type Tab = 'home' | 'jogos' | 'especiais' | 'ranking' | 'admin';
 
 interface BottomNavProps {
   currentTab: Tab;
   onChangeTab: (tab: Tab) => void;
+  showAdmin?: boolean;
 }
 
-export default function BottomNav({ currentTab, onChangeTab }: BottomNavProps) {
-  const tabs = [
+export default function BottomNav({ currentTab, onChangeTab, showAdmin }: BottomNavProps) {
+  const baseTabs: { id: Tab; label: string; icon: React.ReactNode }[] = [
     {
-      id: 'home' as Tab,
+      id: 'home',
       label: 'Início',
       icon: (
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className="w-[22px] h-[22px]">
@@ -18,7 +19,7 @@ export default function BottomNav({ currentTab, onChangeTab }: BottomNavProps) {
       )
     },
     {
-      id: 'jogos' as Tab,
+      id: 'jogos',
       label: 'Jogos',
       icon: (
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className="w-[22px] h-[22px]">
@@ -28,7 +29,7 @@ export default function BottomNav({ currentTab, onChangeTab }: BottomNavProps) {
       )
     },
     {
-      id: 'especiais' as Tab,
+      id: 'especiais',
       label: 'Especiais',
       icon: (
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className="w-[22px] h-[22px]">
@@ -37,7 +38,7 @@ export default function BottomNav({ currentTab, onChangeTab }: BottomNavProps) {
       )
     },
     {
-      id: 'ranking' as Tab,
+      id: 'ranking',
       label: 'Ranking',
       icon: (
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className="w-[22px] h-[22px]">
@@ -46,6 +47,18 @@ export default function BottomNav({ currentTab, onChangeTab }: BottomNavProps) {
       )
     }
   ];
+
+  const adminTab = {
+    id: 'admin' as Tab,
+    label: 'Admin',
+    icon: (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className="w-[22px] h-[22px]">
+        <path d="M12 2l3 7h7l-5.5 4.5 2 7L12 15l-6.5 4 2-7L2 9h7l3-7z"/>
+      </svg>
+    )
+  };
+
+  const tabs = showAdmin ? [...baseTabs, adminTab] : baseTabs;
 
   return (
     <nav className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-md z-20 h-[62px] bg-bolao-bg/90 backdrop-blur-md border-t border-bolao-border flex items-center justify-between pb-safe px-2">
