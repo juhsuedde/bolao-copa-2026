@@ -107,7 +107,7 @@ export default function Especiais() {
         .single();
 
       if (firstMatchData?.match_date) {
-        setFirstMatchDate(new Date(firstMatchData.match_date));
+        setFirstMatchDate(new Date(firstMatchData.match_date.replace(' ', 'T')));
       }
     } catch (err) {
       console.error('Erro geral na busca:', err);
@@ -186,8 +186,6 @@ export default function Especiais() {
 
       <div className="scroll">
         <div className="esplist stagger-children">
-
-          {/* ── CLASSIFICADOS POR GRUPO ─────────────────────── */}
           <div className="ecard">
             <div className="ecard-h toggle" onClick={() => setIsGroupsExpanded(v => !v)}>
               <div>
@@ -256,7 +254,6 @@ export default function Especiais() {
             )}
           </div>
 
-          {/* ── TIMES NA FINAL ──────────────────────────────── */}
           <div className="ecard">
             <div className="ecard-h">
               <div>
@@ -294,7 +291,6 @@ export default function Especiais() {
             })}
           </div>
 
-          {/* ── CAMPEÃO ─────────────────────────────────────── */}
           <div className="ecard">
             <div className="ecard-h">
               <div>
@@ -326,7 +322,6 @@ export default function Especiais() {
             </div>
           </div>
 
-          {/* ── ARTILHEIRO ──────────────────────────────────── */}
           <div className="ecard">
             <div className="ecard-h">
               <div>

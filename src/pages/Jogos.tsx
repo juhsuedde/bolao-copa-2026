@@ -40,7 +40,7 @@ function groupByDay(matches: Match[]): { label: string; matches: Match[] }[] {
   const map = new Map<string, Match[]>();
   for (const m of matches) {
     if (!m.match_date) continue;
-    const d = new Date(m.match_date);
+    const d = new Date(m.match_date.replace(' ', 'T'));
     const today = new Date();
     const isToday =
       d.getDate() === today.getDate() &&
@@ -76,12 +76,12 @@ export default function Jogos() {
 
   const isMatchLocked = (matchDate: string) => {
     if (!matchDate) return false;
-    return currentTime >= new Date(matchDate).getTime() - 10 * 60 * 1000;
+    return currentTime >= new Date(matchDate.replace(' ', 'T')).getTime() - 10 * 60 * 1000;
   };
 
   const isToday = (dateStr: string) => {
     if (!dateStr) return false;
-    const d = new Date(dateStr);
+    const d = new Date(dateStr.replace(' ', 'T'));
     const today = new Date();
     return (
       d.getDate() === today.getDate() &&
@@ -226,18 +226,18 @@ export default function Jogos() {
 
   const formatTime = (dateStr: string) => {
     if (!dateStr) return '';
-    return new Date(dateStr).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+    return new Date(dateStr.replace(' ', 'T')).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
   };
 
   const isLive = (dateStr: string) => {
     if (!dateStr) return false;
-    const start = new Date(dateStr).getTime();
+    const start = new Date(dateStr.replace(' ', 'T')).getTime();
     return currentTime >= start && currentTime <= start + 110 * 60 * 1000;
   };
 
   const liveMinute = (dateStr: string) => {
     if (!dateStr) return 0;
-    return Math.min(90, Math.floor((currentTime - new Date(dateStr).getTime()) / 60000));
+    return Math.min(90, Math.floor((currentTime - new Date(dateStr.replace(' ', 'T')).getTime()) / 60000));
   };
 
   const getPtsBadge = (pick: Pick | undefined, finished: boolean) => {
@@ -288,7 +288,6 @@ export default function Jogos() {
             cursor: finished || !locked ? 'pointer' : 'default',
           }}
         >
-          {/* Top row */}
           <div className="flex items-center justify-between mb-2">
             <span style={{ fontSize: '10.5px', fontWeight: 600, color: 'var(--muted)', letterSpacing: '0.04em', textTransform: 'uppercase' }}>
               {stageLabel}
@@ -307,7 +306,6 @@ export default function Jogos() {
             )}
           </div>
 
-          {/* Teams */}
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2.5 flex-1 min-w-0">
               <span style={{ fontSize: '14px', fontWeight: 600 }} className="truncate">
@@ -357,7 +355,6 @@ export default function Jogos() {
             </div>
           </div>
 
-          {/* Bottom row */}
           <div className="flex items-center justify-between mt-2 pt-2"
             style={{ borderTop: '1px solid rgba(226,223,214,0.4)' }}>
             <div style={{ fontSize: '11px', color: 'var(--muted)' }}>
@@ -396,7 +393,6 @@ export default function Jogos() {
         <span className="hchip green">{chipLabel[filter]}</span>
       </div>
 
-      {/* Filter pills */}
       <div className="flex gap-2 px-5 py-3 overflow-x-auto hide-scrollbar">
         {availableFilters.map(f => (
           <button
@@ -419,7 +415,6 @@ export default function Jogos() {
         ))}
       </div>
 
-      {/* Group filter */}
       {filter === 'grupos' && (
         <div className="px-5 pb-2">
           <div className="grid grid-cols-6 gap-1.5">
@@ -442,7 +437,6 @@ export default function Jogos() {
         </div>
       )}
 
-      {/* Match list */}
       <div className="scroll" style={{ padding: '0 20px' }}>
         {filteredMatches.length === 0 && (
           <div className="text-center py-16 animate-fade-in">
