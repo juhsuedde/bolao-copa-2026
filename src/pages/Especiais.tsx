@@ -166,7 +166,7 @@ export default function Especiais() {
 
                     return (
                         <div key={grupo} className="gmini" style={{ background: 'var(--bg3)', border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)', overflow: 'hidden' }}>
-                        <div className="gmini-h" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '7px 10px' }}>
+                        <div className="gmini-h" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '4px 10px' }}>
                             <div style={{ fontFamily: 'Bebas Neue, sans-serif', fontSize: '14px', color: 'var(--green)' }}>Grupo {grupo}</div>
                             <div style={{ fontSize: '9px', color: 'var(--muted)', fontFamily: 'DM Mono, monospace' }}>{points}</div>
                         </div>
@@ -176,45 +176,83 @@ export default function Especiais() {
                             const teamData = teams.find(t => t.id === teamId);
 
                             return (
-                            <div 
+                                <div 
                                 key={pos} 
                                 onClick={() => openModal(`${pos}º do Grupo ${grupo}`, `group_${grupo.toLowerCase()}_${pos}`, 'team', grupo)}
                                 style={{ 
-                                display: 'flex', alignItems: 'center', gap: '8px', 
-                                padding: '8px 10px', borderTop: '1px solid var(--border)', 
-                                background: 'var(--bg2)', cursor: 'pointer' 
+                                    display: 'flex', 
+                                    alignItems: 'center', 
+                                    gap: '8px', 
+                                    padding: '7px 10px', 
+                                    borderTop: '1px solid var(--border)', 
+                                    background: 'var(--bg2)',
+                                    cursor: 'pointer',
+                                    transition: 'all 0.2s'
                                 }}
-                            >
-                                <div style={{ width: '22px', display: 'flex', justifyContent: 'center', flexShrink: 0 }}>
-                                {teamData?.flag_url ? (
-                                    <img src={teamData.flag_url} alt="" style={{ width: '100%', height: '14px', objectFit: 'cover', borderRadius: '2px' }} />
-                                ) : (
-                                    <span style={{ opacity: 0.3, fontSize: '12px' }}>?</span>
-                                )}
+                                >
+                                {/* 1. Indicador de Posição (1º ou 2º) */}
+                                <div style={{ 
+                                    fontSize: '9px', 
+                                    fontWeight: 800, 
+                                    color: 'var(--muted)', 
+                                    width: '14px',
+                                    opacity: 0.6
+                                }}>
+                                    {pos}º
                                 </div>
 
+                                {/* 2. Bandeira ou Slot Vazio (Dashed) */}
                                 <div style={{ 
-                                flex: 1, fontSize: '10px', fontWeight: 700, 
-                                fontFamily: 'DM Mono, monospace',
-                                color: teamId ? 'var(--text)' : 'var(--muted)',
-                                letterSpacing: '0.05em'
+                                    width: '22px', 
+                                    height: '14px', 
+                                    display: 'flex', 
+                                    justifyContent: 'center', 
+                                    alignItems: 'center',
+                                    flexShrink: 0,
+                                    borderRadius: '2px',
+                                    background: teamId ? 'transparent' : 'var(--bg3)',
+                                    border: teamId ? 'none' : '1px dashed var(--border)'
                                 }}>
-                                {getTeamCode(teamId) || 'selecione'}
+                                    {teamData?.flag_url ? (
+                                    <img src={teamData.flag_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '2px' }} />
+                                    ) : (
+                                    <span style={{ fontSize: '8px', opacity: 0.4 }}>?</span>
+                                    )}
                                 </div>
 
+                                {/* 3. Código do Time (BRA, ARG...) ou Placeholder (---) */}
                                 <div style={{ 
-                                fontSize: '9px', width: '16px', height: '16px', borderRadius: '4px', 
-                                background: teamId ? 'var(--green-light)' : 'var(--bg3)', 
-                                display: 'flex', alignItems: 'center', justifyContent: 'center', 
-                                color: teamId ? 'var(--green)' : 'var(--muted)',
-                                border: teamId ? '1px solid var(--green-mid)' : '1px solid var(--border)',
-                                flexShrink: 0
+                                    flex: 1, 
+                                    fontSize: '12px', 
+                                    fontWeight: teamId ? 700 : 400, 
+                                    fontFamily: 'DM Mono, monospace',
+                                    color: teamId ? 'var(--text)' : 'var(--muted)',
+                                    letterSpacing: teamId ? '0.05em' : '0',
+                                    opacity: teamId ? 1 : 0.5
                                 }}>
-                                {teamId ? '✓' : 'x'}
+                                    {getTeamCode(teamId) || 'Selecionar'}
                                 </div>
-                            </div>
+
+                                {/* 4. Botão de Status (Check ou Mais) */}
+                                <div style={{ 
+                                    fontSize: '11px', 
+                                    width: '18px', 
+                                    height: '18px', 
+                                    borderRadius: '50%', 
+                                    background: teamId ? 'var(--green-light)' : 'var(--bg3)', 
+                                    display: 'flex', 
+                                    alignItems: 'center', 
+                                    justifyContent: 'center', 
+                                    color: teamId ? 'var(--green)' : 'var(--muted)',
+                                    border: teamId ? '1px solid var(--green-mid)' : '1px solid var(--border)',
+                                    flexShrink: 0,
+                                    transition: 'all 0.2s'
+                                }}>
+                                    {teamId ? '✓' : '+'}
+                                </div>
+                                </div>
                             );
-                        })}
+                            })}
                         </div>
                     );
                     })}
