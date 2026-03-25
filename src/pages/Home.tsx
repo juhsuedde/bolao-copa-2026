@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../hooks/useAuth';
+import { useToast } from '../hooks/useToast';
 
 type RankUser = {
   user_id: string;
@@ -17,6 +18,7 @@ const FIRST_MATCH_DATE = new Date('2026-06-11T00:00:00Z');
 
 export default function Home() {
   const { user } = useAuth();
+  const { showToast } = useToast();
   const [ranking, setRanking] = useState<RankUser[]>([]);
   const [loading, setLoading] = useState(true);
   const [showPreCopaBanner, setShowPreCopaBanner] = useState(false);
@@ -37,13 +39,13 @@ export default function Home() {
       if (data && !error) {
         setRanking(data as unknown as RankUser[]);
       } else {
-        console.error('Erro ao buscar o ranking:', error);
+        showToast('Erro ao carregar ranking', 'error');
       }
       setLoading(false);
     }
 
     fetchRanking();
-  }, []);
+  }, [showToast]);
 
   const handleLogout = async () => {
     await supabase.auth.signOut();

@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../hooks/useAuth';
+import { useToast } from '../hooks/useToast';
 
 type LeaderboardEntry = {
   user_id: string;
@@ -15,6 +16,7 @@ const AVATARS = ['🦁', '🐯', '🦊', '⚡', '🌙', '🎯', '🔥', '🐉', 
 
 export default function Ranking() {
   const { user } = useAuth();
+  const { showToast } = useToast();
   const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [expanded, setExpanded] = useState<string | null>(null);
@@ -35,11 +37,11 @@ export default function Ranking() {
         .order('total_points', { ascending: false });
 
       if (data) setLeaderboard(data as unknown as LeaderboardEntry[]);
-      if (error) console.error(error);
+      if (error) showToast('Erro ao carregar ranking', 'error');
       setLoading(false);
     }
     fetchRanking();
-  }, []);
+  }, [showToast]);
 
   const rankColor = (i: number) => {
     if (i === 0) return 'g1';
