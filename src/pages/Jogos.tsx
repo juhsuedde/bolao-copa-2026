@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../hooks/useAuth';
 import ModalPalpite from '../components/ModalPalpite';
@@ -28,7 +28,6 @@ type Pick = {
 type Filter = 'hoje' | 'grupos' | 'todos';
 type GroupFilter = string | null;
 
-// Rótulo legível para cada stage de mata-mata
 const STAGE_LABELS: Record<string, string> = {
   round_of_16:    'Oitavas de Final',
   quarter_finals: 'Quartas de Final',
@@ -37,7 +36,6 @@ const STAGE_LABELS: Record<string, string> = {
   final:          'Final',
 };
 
-// Agrupa os jogos por data (chave = "DD/MM")
 function groupByDay(matches: Match[]): { label: string; matches: Match[] }[] {
   const map = new Map<string, Match[]>();
   for (const m of matches) {
@@ -68,6 +66,8 @@ export default function Jogos() {
   const [currentTime, setCurrentTime] = useState(new Date().getTime());
   const [filter, setFilter] = useState<Filter>('hoje');
   const [groupFilter, setGroupFilter] = useState<GroupFilter>(null);
+  
+  const dayRefs = useRef<Record<string, HTMLDivElement | null>>({});
 
   useEffect(() => {
     const timer = setInterval(() => setCurrentTime(new Date().getTime()), 60000);
@@ -125,6 +125,24 @@ export default function Jogos() {
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
+  const matchesByDay = filter === 'todos' ? groupByDay(matches) : [];
+
+  useEffect(() => {
+    if (filter === 'todos' && matchesByDay.length > 0 && !loading) {
+      const targetDay = matchesByDay.find(day => day.label === 'Hoje') || 
+                        matchesByDay.find(day => day.matches.some(m => m.home_score === null));
+
+      if (targetDay && dayRefs.current[targetDay.label]) {
+        setTimeout(() => {
+          dayRefs.current[targetDay.label]?.scrollIntoView({ 
+            behavior: 'smooth', 
+            block: 'start' 
+          });
+        }, 150);
+      }
+    }
+  }, [filter, loading, matchesByDay.length]);
+
   const isGroupStageOver = matches.length > 0 && matches.every(m => m.stage !== 'group_stage');
   
   useEffect(() => {
@@ -136,18 +154,12 @@ export default function Jogos() {
 
   const openModal = (match: Match) => {
     const finished = match.home_score !== null && match.away_score !== null;
-
-    // Se o jogo terminou, abre o modal de resultados
     if (finished) {
       setSelectedMatch(match);
       setIsResultModalOpen(true);
       return;
     }
-
-    // Se o jogo está travado (já começou), não permite palpite
     if (isMatchLocked(match.match_date)) return;
-
-    // Abre o modal de palpite
     setSelectedMatch(match);
     setIsModalOpen(true);
   };
@@ -178,7 +190,6 @@ export default function Jogos() {
     else fetchData();
   };
 
-  // 1. Grupos fixos conforme Copa 2026
   const availableGroups = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L'];
 
   const filteredMatches = matches.filter(m => {
@@ -212,8 +223,6 @@ export default function Jogos() {
     todos:  'Todos',
   };
 
-  const matchesByDay = filter === 'todos' ? groupByDay(filteredMatches) : [];
-
   const formatTime = (dateStr: string) => {
     if (!dateStr) return '';
     return new Date(dateStr).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
@@ -239,23 +248,12 @@ export default function Jogos() {
         </span>
       );
     }
-    if (pick.points >= 8) {
-      return (
-        <span className="text-[10px] font-bold bg-bolao-green-light text-bolao-green px-2 py-0.5 rounded-full">
-          +{pick.points} pts · exato!
-        </span>
-      );
-    }
-    if (pick.points > 0) {
-      return (
-        <span className="text-[10px] font-bold bg-bolao-green-light text-bolao-green px-2 py-0.5 rounded-full">
-          +{pick.points} pts
-        </span>
-      );
-    }
     return (
-      <span className="text-[10px] font-bold bg-bolao-red-light text-bolao-red px-2 py-0.5 rounded-full">
-        0 pts
+      <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+        pick.points >= 8 ? 'bg-bolao-green-light text-bolao-green' : 
+        pick.points > 0 ? 'bg-bolao-green-light text-bolao-green' : 'bg-bolao-red-light text-bolao-red'
+      }`}>
+        +{pick.points} pts {pick.points >= 8 && '· exato!'}
       </span>
     );
   };
@@ -351,11 +349,6 @@ export default function Jogos() {
             ) : (
               <span className="text-[11px] text-bolao-green font-semibold">Palpitar agora →</span>
             )}
-            {isKnockout && pick?.extra_time_winner && !finished && (
-              <span className="text-[10px] text-bolao-muted border border-bolao-border rounded-full px-1.5 py-0.5">
-                +ET/PK
-              </span>
-            )}
           </div>
           {getPtsBadge(pick, finished) ?? <span className="text-[10px] text-bolao-muted">—</span>}
         </div>
@@ -363,13 +356,10 @@ export default function Jogos() {
     );
   };
 
-  if (loading) return (
-    <div className="p-6 text-bolao-muted flex justify-center mt-10">Carregando...</div>
-  );
+  if (loading) return <div className="p-6 text-bolao-muted flex justify-center mt-10">Carregando...</div>;
 
   return (
     <div className="flex flex-col pb-20">
-
       <div className="flex items-center justify-between px-5 pt-5 pb-0 bg-bolao-bg">
         <h1 className="text-3xl font-display text-bolao-text tracking-wide">Jogos</h1>
         <div className="text-[11px] font-semibold bg-bolao-green-light text-bolao-green px-3 py-1 rounded-full border border-bolao-green-mid">
@@ -377,58 +367,43 @@ export default function Jogos() {
         </div>
       </div>
 
-      {/* Filtros principais */}
-      <div className="flex gap-[6px] px-5 pt-[10px] pb-0 overflow-x-auto">
-        {availableFilters.map(f => {
-          const isActive = filter === f;
-          const isDefault = f === 'hoje';
-          return (
-            <button
-              key={f}
-              onClick={() => {
-                    setFilter(f);
-                    if (f === 'grupos') {
-                        setGroupFilter('A');
-                    } else {
-                        setGroupFilter(null);
-                    }
-                    }}
-              className={`flex-shrink-0 px-[13px] py-[6px] rounded-full text-[11px] font-semibold border transition-all ${
-                isActive && isDefault
-                  ? 'bg-bolao-green text-white border-bolao-green'
-                  : isActive
-                  ? 'bg-bolao-green-light border-bolao-green-mid text-bolao-green'
-                  : 'bg-bolao-bg-card border-bolao-border text-bolao-muted'
-              }`}
-            >
-              {filterLabel[f]}
-            </button>
-          );
-        })}
+      <div className="flex gap-[6px] px-5 pt-[10px] pb-0 overflow-x-auto no-scrollbar">
+        {availableFilters.map(f => (
+          <button
+            key={f}
+            onClick={() => {
+              setFilter(f);
+              if (f === 'grupos') setGroupFilter('A');
+              else setGroupFilter(null);
+            }}
+            className={`flex-shrink-0 px-[13px] py-[6px] rounded-full text-[11px] font-semibold border transition-all ${
+              filter === f ? (f === 'hoje' ? 'bg-bolao-green text-white border-bolao-green' : 'bg-bolao-green-light border-bolao-green-mid text-bolao-green') : 'bg-bolao-bg-card border-bolao-border text-bolao-muted'
+            }`}
+          >
+            {filterLabel[f]}
+          </button>
+        ))}
       </div>
 
-      {/* 2. Sub-filtro de grupos */}
       {filter === 'grupos' && (
-        <div className="flex gap-[5px] px-5 pt-[8px] pb-0 overflow-x-auto no-scrollbar">
-          {availableGroups.map(g => (
-            <button
-              key={g}
-              onClick={() => setGroupFilter(g === groupFilter ? null : g)}
-              className={`flex-shrink-0 px-[11px] py-[4px] rounded-full text-[10px] font-semibold border transition-all ${
-                groupFilter === g
-                  ? 'bg-bolao-text text-bolao-bg border-bolao-text shadow-sm'
-                  : 'bg-bolao-bg-card border-bolao-border text-bolao-muted'
-              }`}
-            >
-              {g}
-            </button>
-          ))}
+        <div className="px-5 pt-3 pb-2">
+          <div className="grid grid-cols-6 gap-2">
+            {availableGroups.map(g => (
+              <button
+                key={g}
+                onClick={() => setGroupFilter(g)}
+                className={`h-9 flex items-center justify-center rounded-lg text-[11px] font-bold border transition-all ${
+                  groupFilter === g ? 'bg-bolao-text text-bolao-bg border-bolao-text shadow-sm' : 'bg-bolao-bg-card border-bolao-border text-bolao-muted'
+                }`}
+              >
+                {g}
+              </button>
+            ))}
+          </div>
         </div>
       )}
 
-      {/* Lista — "Todos" agrupa por dia, demais filtros lista plana */}
       <div className="flex flex-col gap-[6px] px-5 pt-[10px]">
-
         {filteredMatches.length === 0 && (
           <div className="text-center py-10 text-bolao-muted text-sm">
             {filter === 'hoje' ? 'Nenhum jogo hoje.' : 'Nenhum jogo encontrado.'}
@@ -437,15 +412,11 @@ export default function Jogos() {
 
         {filter === 'todos' ? (
           matchesByDay.map(({ label, matches: dayMatches }) => (
-            <div key={label}>
+            <div key={label} ref={el => dayRefs.current[label] = el} className="scroll-mt-24">
               <div className="flex items-center gap-3 py-2">
-                <span className="text-[11px] font-bold text-bolao-text uppercase tracking-[0.08em]">
-                  {label}
-                </span>
+                <span className="text-[11px] font-bold text-bolao-text uppercase tracking-[0.08em]">{label}</span>
                 <div className="flex-1 h-px bg-bolao-border" />
-                <span className="text-[10px] text-bolao-muted">
-                  {dayMatches.length} jogo{dayMatches.length !== 1 ? 's' : ''}
-                </span>
+                <span className="text-[10px] text-bolao-muted">{dayMatches.length} jogo{dayMatches.length !== 1 ? 's' : ''}</span>
               </div>
               <div className="flex flex-col gap-[6px]">
                 {dayMatches.map(match => <MatchCard key={match.id} match={match} />)}
@@ -455,25 +426,23 @@ export default function Jogos() {
         ) : (
           filteredMatches.map(match => <MatchCard key={match.id} match={match} />)
         )}
-
       </div>
 
       {selectedMatch && (
-        <ModalPalpite
-          isOpen={isModalOpen}
-          onClose={() => setIsModalOpen(false)}
-          match={selectedMatch}
-          currentPick={userPicks[selectedMatch.id] || null}
-          onSave={handleSavePick}
-        />
-      )}
-
-      {selectedMatch && (
-        <ModalResultadoJogo
-          isOpen={isResultModalOpen}
-          onClose={() => setIsResultModalOpen(false)}
-          match={selectedMatch}
-        />
+        <>
+          <ModalPalpite
+            isOpen={isModalOpen}
+            onClose={() => setIsModalOpen(false)}
+            match={selectedMatch}
+            currentPick={userPicks[selectedMatch.id] || null}
+            onSave={handleSavePick}
+          />
+          <ModalResultadoJogo
+            isOpen={isResultModalOpen}
+            onClose={() => setIsResultModalOpen(false)}
+            match={selectedMatch}
+          />
+        </>
       )}
     </div>
   );
