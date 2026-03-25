@@ -62,8 +62,14 @@ export default function BottomNav({ currentTab, onChangeTab, showAdmin }: Bottom
   const tabs = showAdmin ? [...baseTabs, adminTab] : baseTabs;
 
   return (
-    <nav className="bottom-nav flex-shrink-0 flex justify-around items-center px-2 pb-[env(safe-area-inset-bottom)]"
-      style={{ height: '64px' }}>
+    <nav 
+      className="fixed bottom-0 left-0 right-0 w-full z-50 flex justify-around items-center px-2 pb-[env(safe-area-inset-bottom)]"
+      style={{ 
+        height: '64px',
+        background: 'var(--bg)', // Puxa o fundo do seu novo design
+        borderTop: '1px solid var(--border)' // Borda suave para separar do conteúdo
+      }}
+    >
       {tabs.map(tab => (
         <button
           key={tab.id}
