@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect, useMemo } from 'react';
 import { useMatches } from '../hooks/useMatches';
+import { useToast } from '../hooks/useToast';
 import ModalPalpite from '../components/ModalPalpite';
 import ModalResultadoJogo from '../components/ModalResultadoJogo';
 import MatchCard from '../components/MatchCard';
@@ -42,6 +43,8 @@ export default function Jogos() {
     isGroupStageOver,
     filterMatches,
   } = useMatches();
+
+  const { showToast } = useToast();
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isResultModalOpen, setIsResultModalOpen] = useState(false);
@@ -126,14 +129,19 @@ export default function Jogos() {
     setIsModalOpen(true);
   };
 
-  const handleSavePick = (
+  const handleSavePick = async (
     matchId: string,
     homeScore: number,
     awayScore: number,
     extraTimeWinner: string | null,
     penaltiesWinner: string | null
   ) => {
-    savePick(matchId, homeScore, awayScore, extraTimeWinner, penaltiesWinner);
+    try {
+      await savePick(matchId, homeScore, awayScore, extraTimeWinner, penaltiesWinner);
+      showToast('Palpite salvo com sucesso!', 'success');
+    } catch (error) {
+      showToast('Erro ao salvar palpite. Tente novamente.', 'error');
+    }
   };
 
   if (loading) return <div className="p-6 text-bolao-muted flex justify-center mt-10">Carregando...</div>;
@@ -152,10 +160,22 @@ export default function Jogos() {
 
       <div className="flex flex-col gap-[6px] px-5 pt-[10px]">
         {filteredMatches.length === 0 && (
-          <div className="text-center py-10 text-bolao-muted text-sm">
-            {filter === 'hoje' ? 'Nenhum jogo hoje.' :
-             filter === 'proximos' ? 'Nenhum jogo encontrado.' :
-             'Nenhum jogo encontrado.'}
+          <div className="flex flex-col items-center justify-center py-16 text-center">
+            <div className="w-16 h-16 bg-bolao-bg-card border border-bolao-border rounded-full flex items-center justify-center mb-4">
+              <svg className="w-8 h-8 text-bolao-muted" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+              </svg>
+            </div>
+            <p className="text-bolao-muted text-sm font-medium">
+              {filter === 'hoje' ? 'Nenhum jogo hoje' :
+               filter === 'proximos' ? 'Nenhum jogo agendado' :
+               filter === 'grupos' ? 'Nenhum jogo neste grupo' :
+               'Nenhum jogo encontrado'}
+            </p>
+            <p className="text-bolao-muted/60 text-xs mt-1">
+              {filter === 'hoje' ? 'Volte amanhã para novos palpites' :
+               'Selecione outro filtro'}
+            </p>
           </div>
         )}
 
