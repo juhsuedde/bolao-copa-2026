@@ -1,13 +1,40 @@
-import { useState, useRef, useEffect, useMemo } from 'react';
-import { useMatches } from '../hooks/useMatches';
-import { useToast } from '../hooks/useToast';
+import { useState, useEffect, useCallback, useRef } from 'react';
+import { supabase } from '../lib/supabase';
+import { useAuth } from '../hooks/useAuth';
 import ModalPalpite from '../components/ModalPalpite';
 import ModalResultadoJogo from '../components/ModalResultadoJogo';
-import MatchCard from '../components/MatchCard';
-import MatchFilters from '../components/MatchFilters';
-import MatchDayGroup from '../components/MatchDayGroup';
-import type { Match, Filter, GroupFilter } from '../types';
-import { FIRST_MATCH_DATE } from '../types';
+
+export type Match = {
+  id: string;
+  home_team: string;
+  away_team: string;
+  home: { name: string; group_name: string; flag_url: string };
+  away: { name: string; group_name: string; flag_url: string };
+  match_date: string;
+  stage: string;
+  home_score: number | null;
+  away_score: number | null;
+};
+
+type Pick = {
+  match_id: string;
+  home_score: number;
+  away_score: number;
+  points: number;
+  extra_time_winner: string | null;
+  penalties_winner: string | null;
+};
+
+type Filter = 'hoje' | 'grupos' | 'todos';
+type GroupFilter = string | null;
+
+const STAGE_LABELS: Record<string, string> = {
+  round_of_16: 'Oitavas de Final',
+  quarter_finals: 'Quartas de Final',
+  semi_finals: 'Semifinal',
+  third_place: '3º Lugar',
+  final: 'Final',
+};
 
 function groupByDay(matches: Match[]): { label: string; matches: Match[] }[] {
   const map = new Map<string, Match[]>();
@@ -29,97 +56,106 @@ function groupByDay(matches: Match[]): { label: string; matches: Match[] }[] {
 }
 
 export default function Jogos() {
-  const {
-    matches,
-    userPicks,
-    loading,
-    isMatchLocked,
-    isToday,
-    isFirstMatchDay,
-    isLive,
-    liveMinute,
-    formatTime,
-    savePick,
-    isGroupStageOver,
-    filterMatches,
-  } = useMatches();
-
-  const { showToast } = useToast();
-
+  const { user } = useAuth();
+  const [matches, setMatches] = useState<Match[]>([]);
+  const [userPicks, setUserPicks] = useState<Record<string, Pick>>({});
+  const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isResultModalOpen, setIsResultModalOpen] = useState(false);
   const [selectedMatch, setSelectedMatch] = useState<Match | null>(null);
-  const [filter, setFilter] = useState<Filter>(() => {
-    const now = new Date();
-    const firstMatchDay = new Date(FIRST_MATCH_DATE);
-    firstMatchDay.setHours(0, 0, 0, 0);
-    return now < firstMatchDay ? 'proximos' : 'hoje';
-  });
-  const [groupFilter, setGroupFilter] = useState<GroupFilter>('A');
+  const [currentTime, setCurrentTime] = useState(new Date().getTime());
+  const [filter, setFilter] = useState<Filter>('hoje');
+  const [groupFilter, setGroupFilter] = useState<GroupFilter>(null);
+
   const dayRefs = useRef<Record<string, HTMLDivElement | null>>({});
 
-  const now = new Date();
-  const firstMatchDay = new Date(FIRST_MATCH_DATE);
-  firstMatchDay.setHours(0, 0, 0, 0);
-  const isBeforeFirstDay = now < firstMatchDay;
+  useEffect(() => {
+    const timer = setInterval(() => setCurrentTime(new Date().getTime()), 60000);
+    return () => clearInterval(timer);
+  }, []);
 
-  const availableFilters: Filter[] = (() => {
-    if (isGroupStageOver) return ['hoje', 'todos'];
-    if (isBeforeFirstDay) return ['proximos', 'grupos', 'todos'];
-    return ['hoje', 'grupos', 'todos'];
-  })();
+  const isMatchLocked = (matchDate: string) => {
+    if (!matchDate) return false;
+    return currentTime >= new Date(matchDate).getTime() - 10 * 60 * 1000;
+  };
+
+  const isToday = (dateStr: string) => {
+    if (!dateStr) return false;
+    const d = new Date(dateStr);
+    const today = new Date();
+    return (
+      d.getDate() === today.getDate() &&
+      d.getMonth() === today.getMonth() &&
+      d.getFullYear() === today.getFullYear()
+    );
+  };
+
+  const fetchData = useCallback(async () => {
+    if (!user) return;
+    setLoading(true);
+    try {
+      const { data: matchesData, error: matchesError } = await supabase
+        .from('matches')
+        .select(`
+          id, match_date, stage, home_score, away_score, home_team, away_team,
+          home:teams!matches_home_team_fkey(name, group_name, flag_url),
+          away:teams!matches_away_team_fkey(name, group_name, flag_url)
+        `)
+        .eq('stage', 'group_stage')
+        .order('match_date', { ascending: true });
+
+      if (matchesError) throw matchesError;
+      if (matchesData) setMatches(matchesData as unknown as Match[]);
+
+      const { data: picksData } = await supabase
+        .from('match_picks')
+        .select('match_id, home_score, away_score, points, extra_time_winner, penalties_winner')
+        .eq('user_id', user.id);
+
+      if (picksData) {
+        const picksMap: Record<string, Pick> = {};
+        picksData.forEach(pick => { picksMap[pick.match_id] = pick; });
+        setUserPicks(picksMap);
+      }
+    } catch (err) {
+      console.error('Erro na busca:', err);
+    } finally {
+      setLoading(false);
+    }
+  }, [user]);
+
+  useEffect(() => { fetchData(); }, [fetchData]);
+
+  const matchesByDay = filter === 'todos' ? groupByDay(matches) : [];
+
+  useEffect(() => {
+    if (filter === 'todos' && matchesByDay.length > 0 && !loading) {
+      const targetDay = matchesByDay.find(day => day.label === 'Hoje') ||
+        matchesByDay.find(day => day.matches.some(m => m.home_score === null));
+
+      if (targetDay && dayRefs.current[targetDay.label]) {
+        setTimeout(() => {
+          dayRefs.current[targetDay.label]?.scrollIntoView({
+            behavior: 'smooth',
+            block: 'start'
+          });
+        }, 150);
+      }
+    }
+  }, [filter, loading, matchesByDay.length]);
+
+  const isGroupStageOver = matches.length > 0 && matches.every(m => m.stage !== 'group_stage');
 
   useEffect(() => {
     if (isGroupStageOver && filter === 'grupos') {
       setFilter('hoje');
       setGroupFilter(null);
     }
-  }, [isGroupStageOver]);
-
-  const handleFilterChange = (newFilter: Filter) => {
-    setFilter(newFilter);
-    if (newFilter === 'grupos') setGroupFilter('A');
-    else setGroupFilter(null);
-  };
-
-  const filteredMatches = filterMatches(filter, groupFilter);
-  const matchesByDay = useMemo(
-    () => filter === 'todos' ? groupByDay(matches) : [],
-    [filter, matches]
-  );
-
-  const { todayCount, proximosCount, groupCount } = {
-    todayCount: matches.filter(m => isToday(m.match_date)).length,
-    proximosCount: matches.filter(m => isFirstMatchDay(m.match_date)).length,
-    groupCount: groupFilter
-      ? matches.filter(m => m.home?.group_name === groupFilter).length
-      : matches.filter(m => !!m.home?.group_name).length,
-  };
-
-  const chipLabel: Record<Filter, string> = {
-    proximos: `${proximosCount} jogo${proximosCount !== 1 ? 's' : ''}`,
-    hoje:     `${todayCount} jogo${todayCount !== 1 ? 's' : ''} hoje`,
-    grupos:   `${groupCount} jogo${groupCount !== 1 ? 's' : ''}`,
-    todos:    `${matches.length} jogos`,
-  };
-
-  useEffect(() => {
-    if (filter === 'todos' && matchesByDay.length > 0 && !loading) {
-      const targetDay =
-        matchesByDay.find(d => d.label === 'Hoje') ||
-        matchesByDay.find(d => d.matches.some(m => m.home_score === null));
-      if (targetDay && dayRefs.current[targetDay.label]) {
-        setTimeout(() => {
-          dayRefs.current[targetDay.label]?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-        }, 150);
-      }
-    }
-  }, [filter, loading, matchesByDay.length]);
+  }, [isGroupStageOver, filter]);
 
   const openModal = (match: Match) => {
     const finished = match.home_score !== null && match.away_score !== null;
-    const live = isLive(match.match_date);
-    if (finished && !live) {
+    if (finished) {
       setSelectedMatch(match);
       setIsResultModalOpen(true);
       return;
@@ -136,78 +172,313 @@ export default function Jogos() {
     extraTimeWinner: string | null,
     penaltiesWinner: string | null
   ) => {
-    try {
-      await savePick(matchId, homeScore, awayScore, extraTimeWinner, penaltiesWinner);
-      showToast('Palpite salvo com sucesso!', 'success');
-    } catch (error) {
-      showToast('Erro ao salvar palpite. Tente novamente.', 'error');
-    }
+    if (!user) return;
+    const match = matches.find(m => m.id === matchId);
+    if (match && isMatchLocked(match.match_date)) { alert('Tempo esgotado!'); return; }
+
+    const { error } = await supabase
+      .from('match_picks')
+      .upsert({
+        user_id: user.id,
+        match_id: matchId,
+        home_score: homeScore,
+        away_score: awayScore,
+        extra_time_winner: extraTimeWinner,
+        penalties_winner: penaltiesWinner,
+      }, { onConflict: 'user_id,match_id' });
+
+    if (error) alert(error.message);
+    else fetchData();
   };
 
-  if (loading) return <div className="p-6 text-bolao-muted flex justify-center mt-10">Carregando...</div>;
+  const availableGroups = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L'];
+
+  const filteredMatches = matches.filter(m => {
+    if (filter === 'hoje') return isToday(m.match_date);
+    if (filter === 'grupos') {
+      if (!m.home?.group_name) return false;
+      if (groupFilter) return m.home.group_name === groupFilter;
+      return true;
+    }
+    return true;
+  });
+
+  const todayCount = matches.filter(m => isToday(m.match_date)).length;
+  const groupCount = groupFilter
+    ? matches.filter(m => m.home?.group_name === groupFilter).length
+    : matches.filter(m => !!m.home?.group_name).length;
+
+  const chipLabel: Record<Filter, string> = {
+    hoje: `${todayCount} jogo${todayCount !== 1 ? 's' : ''} hoje`,
+    grupos: `${groupCount} jogo${groupCount !== 1 ? 's' : ''}`,
+    todos: `${matches.length} jogos`,
+  };
+
+  const availableFilters: Filter[] = isGroupStageOver
+    ? ['hoje', 'todos']
+    : ['hoje', 'grupos', 'todos'];
+
+  const filterLabel: Record<Filter, string> = {
+    hoje: 'Hoje',
+    grupos: 'Grupos',
+    todos: 'Todos',
+  };
+
+  const formatTime = (dateStr: string) => {
+    if (!dateStr) return '';
+    return new Date(dateStr).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+  };
+
+  const isLive = (dateStr: string) => {
+    if (!dateStr) return false;
+    const start = new Date(dateStr).getTime();
+    return currentTime >= start && currentTime <= start + 110 * 60 * 1000;
+  };
+
+  const liveMinute = (dateStr: string) => {
+    if (!dateStr) return 0;
+    return Math.min(90, Math.floor((currentTime - new Date(dateStr).getTime()) / 60000));
+  };
+
+  const getPtsBadge = (pick: Pick | undefined, finished: boolean) => {
+    if (!pick) return null;
+    if (!finished) {
+      return (
+        <span className="hchip" style={{
+          background: 'var(--bg3)', color: 'var(--muted)',
+          border: '1px solid var(--border)', fontSize: '10px',
+        }}>
+          Aguardando
+        </span>
+      );
+    }
+    return (
+      <span className="hchip" style={{
+        background: pick.points >= 8 ? 'var(--green-light)' : pick.points > 0 ? 'var(--green-light)' : 'var(--red-light)',
+        color: pick.points > 0 ? 'var(--green)' : 'var(--red)',
+        border: `1px solid ${pick.points > 0 ? 'var(--green-mid)' : '#F0B0AA'}`,
+        fontSize: '10px',
+      }}>
+        +{pick.points} pts {pick.points >= 8 && '· exato!'}
+      </span>
+    );
+  };
+
+  const MatchCard = ({ match }: { match: Match }) => {
+    const pick = userPicks[match.id];
+    const locked = isMatchLocked(match.match_date);
+    const live = isLive(match.match_date);
+    const finished = match.home_score !== null && match.away_score !== null;
+    const isKnockout = match.stage !== 'group_stage';
+    const stageLabel = isKnockout
+      ? (STAGE_LABELS[match.stage] ?? match.stage.replace(/_/g, ' '))
+      : match.home?.group_name
+        ? `Grupo ${match.home.group_name}`
+        : 'Fase de grupos';
+
+    return (
+      <div className="animate-fade-in">
+        <div
+          onClick={() => openModal(match)}
+          className={`glass-card px-4 py-3 transition-all ${
+            pick ? 'border-l-[3px]' : ''
+          } ${finished ? 'opacity-60' : locked ? 'opacity-75' : ''}`}
+          style={{
+            borderLeftColor: pick ? 'var(--green-mid)' : undefined,
+            cursor: finished || !locked ? 'pointer' : 'default',
+          }}
+        >
+          {/* Top row */}
+          <div className="flex items-center justify-between mb-2">
+            <span style={{ fontSize: '10.5px', fontWeight: 600, color: 'var(--muted)', letterSpacing: '0.04em', textTransform: 'uppercase' }}>
+              {stageLabel}
+            </span>
+            {live ? (
+              <span className="flex items-center gap-1.5" style={{ fontSize: '10px', fontWeight: 700, color: '#EF4444' }}>
+                <span className="live-dot" />
+                AO VIVO {liveMinute(match.match_date)}'
+              </span>
+            ) : locked && finished ? (
+              <span style={{ fontSize: '10.5px', color: 'var(--muted)' }}>{formatTime(match.match_date)}</span>
+            ) : locked ? (
+              <span style={{ fontSize: '10.5px', color: 'var(--muted)' }}>🔒 Fechado</span>
+            ) : (
+              <span style={{ fontSize: '10.5px', color: 'var(--muted)' }}>{formatTime(match.match_date)}</span>
+            )}
+          </div>
+
+          {/* Teams */}
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2.5 flex-1 min-w-0">
+              <span style={{ fontSize: '14px', fontWeight: 600 }} className="truncate">
+                {match.home?.name || match.home_team}
+              </span>
+              {match.home?.flag_url ? (
+                <img src={match.home.flag_url} alt={match.home.name}
+                  className="w-6 h-4 object-cover rounded-sm flex-shrink-0"
+                  style={{ border: '1px solid var(--border)', boxShadow: '0 1px 2px rgba(0,0,0,0.08)' }} />
+              ) : (
+                <span className="flex-shrink-0">⚽</span>
+              )}
+            </div>
+
+            <div className="px-3 flex-shrink-0">
+              {finished ? (
+                <div className="flex items-center gap-1.5">
+                  <span style={{
+                    fontFamily: "'DM Mono', monospace", fontSize: '20px', fontWeight: 700,
+                  }}>{match.home_score}</span>
+                  <span style={{ fontSize: '12px', color: 'var(--muted)' }}>x</span>
+                  <span style={{
+                    fontFamily: "'DM Mono', monospace", fontSize: '20px', fontWeight: 700,
+                  }}>{match.away_score}</span>
+                </div>
+              ) : (
+                <span style={{
+                  fontFamily: "'Bebas Neue', sans-serif",
+                  fontSize: '16px',
+                  color: 'var(--muted)',
+                  letterSpacing: '2px',
+                }}>VS</span>
+              )}
+            </div>
+
+            <div className="flex items-center gap-2.5 flex-1 min-w-0 justify-end">
+              {match.away?.flag_url ? (
+                <img src={match.away.flag_url} alt={match.away.name}
+                  className="w-6 h-4 object-cover rounded-sm flex-shrink-0"
+                  style={{ border: '1px solid var(--border)', boxShadow: '0 1px 2px rgba(0,0,0,0.08)' }} />
+              ) : (
+                <span className="flex-shrink-0">⚽</span>
+              )}
+              <span style={{ fontSize: '14px', fontWeight: 600 }} className="truncate text-right">
+                {match.away?.name || match.away_team}
+              </span>
+            </div>
+          </div>
+
+          {/* Bottom row */}
+          <div className="flex items-center justify-between mt-2 pt-2"
+            style={{ borderTop: '1px solid rgba(226,223,214,0.4)' }}>
+            <div style={{ fontSize: '11px', color: 'var(--muted)' }}>
+              {finished ? (
+                <span style={{ color: 'var(--green)', fontWeight: 600 }}>Ver palpites →</span>
+              ) : pick ? (
+                <span>Palpite: <strong>{pick.home_score}–{pick.away_score}</strong></span>
+              ) : locked ? (
+                <span>Sem palpite</span>
+              ) : (
+                <span style={{ color: 'var(--green)', fontWeight: 600 }}>Palpitar agora →</span>
+              )}
+            </div>
+            <div>
+              {getPtsBadge(pick, finished) ?? <span style={{ fontSize: '11px', color: 'var(--border)' }}>—</span>}
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  if (loading) return (
+    <div className="flex-1 flex items-center justify-center animate-fade-in">
+      <div className="text-center">
+        <div className="text-3xl mb-2 animate-pulse-glow inline-block">⚽</div>
+        <p style={{ color: 'var(--muted)', fontSize: '13px' }}>Carregando...</p>
+      </div>
+    </div>
+  );
 
   return (
-    <div className="flex flex-col pb-20">
-      <MatchFilters
-        filter={filter}
-        groupFilter={groupFilter}
-        onFilterChange={handleFilterChange}
-        onGroupChange={setGroupFilter}
-        availableFilters={availableFilters}
-        chipLabel={chipLabel[filter]}
-        isGroupStageOver={isGroupStageOver}
-      />
+    <div className="flex flex-col h-full" style={{ background: 'var(--bg)' }}>
+      <div className="screen-header">
+        <h1 className="screen-title">Jogos</h1>
+        <span className="hchip green">{chipLabel[filter]}</span>
+      </div>
 
-      <div className="flex flex-col gap-[6px] px-5 pt-[10px]">
+      {/* Filter pills */}
+      <div className="flex gap-2 px-5 py-3 overflow-x-auto hide-scrollbar">
+        {availableFilters.map(f => (
+          <button
+            key={f}
+            onClick={() => {
+              setFilter(f);
+              if (f === 'grupos') setGroupFilter('A');
+              else setGroupFilter(null);
+            }}
+            className="flex-shrink-0 px-4 py-1.5 rounded-full text-xs font-semibold transition-all active:scale-95"
+            style={{
+              background: filter === f ? (f === 'hoje' ? 'var(--green)' : 'var(--green-light)') : 'rgba(255,255,255,0.7)',
+              color: filter === f ? (f === 'hoje' ? '#fff' : 'var(--green)') : 'var(--muted)',
+              border: `1px solid ${filter === f ? (f === 'hoje' ? 'var(--green)' : 'var(--green-mid)') : 'var(--border)'}`,
+              backdropFilter: 'blur(8px)',
+            }}
+          >
+            {filterLabel[f]}
+          </button>
+        ))}
+      </div>
+
+      {/* Group filter */}
+      {filter === 'grupos' && (
+        <div className="px-5 pb-2">
+          <div className="grid grid-cols-6 gap-1.5">
+            {availableGroups.map(g => (
+              <button
+                key={g}
+                onClick={() => setGroupFilter(g)}
+                className="h-9 flex items-center justify-center rounded-lg text-xs font-bold transition-all active:scale-95"
+                style={{
+                  background: groupFilter === g ? 'var(--text)' : 'rgba(255,255,255,0.7)',
+                  color: groupFilter === g ? 'var(--bg)' : 'var(--muted)',
+                  border: `1px solid ${groupFilter === g ? 'var(--text)' : 'var(--border)'}`,
+                  backdropFilter: 'blur(6px)',
+                }}
+              >
+                {g}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Match list */}
+      <div className="scroll" style={{ padding: '0 20px' }}>
         {filteredMatches.length === 0 && (
-          <div className="flex flex-col items-center justify-center py-16 text-center">
-            <div className="w-16 h-16 bg-bolao-bg-card border border-bolao-border rounded-full flex items-center justify-center mb-4">
-              <svg className="w-8 h-8 text-bolao-muted" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-              </svg>
-            </div>
-            <p className="text-bolao-muted text-sm font-medium">
-              {filter === 'hoje' ? 'Nenhum jogo hoje' :
-               filter === 'proximos' ? 'Nenhum jogo agendado' :
-               filter === 'grupos' ? 'Nenhum jogo neste grupo' :
-               'Nenhum jogo encontrado'}
-            </p>
-            <p className="text-bolao-muted/60 text-xs mt-1">
-              {filter === 'hoje' ? 'Volte amanhã para novos palpites' :
-               'Selecione outro filtro'}
+          <div className="text-center py-16 animate-fade-in">
+            <p style={{ fontSize: '28px', marginBottom: '8px' }}>⚽</p>
+            <p style={{ color: 'var(--muted)', fontSize: '13px' }}>
+              {filter === 'hoje' ? 'Nenhum jogo hoje.' : 'Nenhum jogo encontrado.'}
             </p>
           </div>
         )}
 
-        {filter === 'todos' ? (
-          matchesByDay.map(({ label, matches: dayMatches }) => (
-            <MatchDayGroup
-              key={label}
-              label={label}
-              matches={dayMatches}
-              getPick={(id) => userPicks[id]}
-              isMatchLocked={isMatchLocked}
-              isLive={isLive}
-              liveMinute={liveMinute}
-              formatTime={formatTime}
-              onMatchClick={openModal}
-              dayRef={(el) => { dayRefs.current[label] = el; }}
-            />
-          ))
-        ) : (
-          filteredMatches.map(match => (
-            <MatchCard
-              key={match.id}
-              match={match}
-              pick={userPicks[match.id]}
-              isLocked={isMatchLocked(match.match_date)}
-              isLive={isLive(match.match_date)}
-              liveMinute={liveMinute(match.match_date)}
-              formatTime={formatTime}
-              onClick={() => openModal(match)}
-            />
-          ))
-        )}
+        <div className="flex flex-col gap-2.5 stagger-children">
+          {filter === 'todos' ? (
+            matchesByDay.map(({ label, matches: dayMatches }) => (
+              <div key={label}>
+                <div ref={el => { dayRefs.current[label] = el; }} className="scroll-mt-24">
+                  <div className="flex items-center justify-between py-2 px-1">
+                    <span style={{
+                      fontFamily: "'Bebas Neue', sans-serif",
+                      fontSize: '16px',
+                      color: 'var(--text)',
+                      letterSpacing: '0.5px',
+                    }}>{label}</span>
+                    <span style={{ fontSize: '10px', color: 'var(--muted)' }}>
+                      {dayMatches.length} jogo{dayMatches.length !== 1 ? 's' : ''}
+                    </span>
+                  </div>
+                  <div className="flex flex-col gap-2">
+                    {dayMatches.map(match => <MatchCard key={match.id} match={match} />)}
+                  </div>
+                </div>
+              </div>
+            ))
+          ) : (
+            filteredMatches.map(match => <MatchCard key={match.id} match={match} />)
+          )}
+        </div>
       </div>
 
       {selectedMatch && (

@@ -13,8 +13,9 @@ type RankUser = {
 };
 
 const AVATARS = ['🦁', '🐯', '🦊', '⚡', '🌙', '🎯', '🔥', '🐉', '🦅', '🌟'];
-
 const FIRST_MATCH_DATE = new Date('2026-06-11T00:00:00Z');
+
+const MEDALS = ['🥇', '🥈', '🥉'];
 
 export default function Home() {
   const { user } = useAuth();
@@ -52,171 +53,224 @@ export default function Home() {
   };
 
   if (loading) {
-    return <div className="p-6 text-bolao-muted flex justify-center mt-10">Carregando...</div>;
+    return (
+      <div className="flex-1 flex items-center justify-center animate-fade-in">
+        <div className="text-center">
+          <div className="text-3xl mb-2 animate-pulse-glow inline-block">⚽</div>
+          <p style={{ color: 'var(--muted)', fontSize: '13px' }}>Carregando...</p>
+        </div>
+      </div>
+    );
   }
 
   const myRankIndex = ranking.findIndex(r => r.user_id === user?.id);
   const myData = myRankIndex !== -1 ? ranking[myRankIndex] : null;
   const myPosition = myRankIndex !== -1 ? myRankIndex + 1 : null;
+  const maxPoints = ranking.length > 0 ? ranking[0].total_points : 1;
 
   return (
-    <div className="flex flex-col gap-4 pb-20">
-
-      <div className="px-5 pt-5 flex items-center justify-between bg-bolao-bg">
-        <h1 className="text-3xl font-display text-bolao-text tracking-wide">Início</h1>
-        <div className="text-[11px] font-semibold bg-bolao-green-light text-bolao-green px-3 py-1 rounded-full border border-bolao-green-mid">
-          Bolão da Copa 2026
-        </div>
+    <div className="flex flex-col h-full" style={{ background: 'var(--bg)' }}>
+      {/* Header */}
+      <div className="screen-header">
+        <h1 className="screen-title">Início</h1>
+        <span className="hchip green">Bolão da Copa 2026</span>
       </div>
 
-      {/* Hero card de pontuação */}
-      <div className="mx-5 bg-bolao-green rounded-2xl p-5 text-white relative overflow-hidden shadow-lg mt-2">
-        <div className="absolute -right-2 -top-4 font-display text-[120px] text-white opacity-5 select-none pointer-events-none leading-none">
-          2026
-        </div>
-        <div className="text-[10px] font-semibold tracking-[0.1em] uppercase opacity-75 mb-1">
-          Sua pontuação
-        </div>
-        <div className="text-xl font-semibold mb-1 truncate pr-16">
-          {myData?.user?.name || user?.user_metadata?.full_name || 'Jogador'}
-        </div>
-        <div className="font-mono text-5xl leading-none mt-2 flex items-baseline gap-1">
-          {myData?.total_points ?? 0}
-          <span className="text-sm font-sans font-normal opacity-75">pts</span>
-        </div>
-        <div className="absolute top-5 right-5 text-center">
-          <div className="font-display text-[52px] leading-none opacity-90">
-            {myPosition ? `${myPosition}º` : '–'}
+      <div className="scroll" style={{ padding: '12px 20px 0' }}>
+        {/* Hero card */}
+        <div className="hero-gradient rounded-2xl p-5 text-white mb-5 animate-slide-down"
+          style={{ boxShadow: 'var(--shadow-hero)' }}>
+          <div className="flex items-center justify-between relative z-10">
+            <div>
+              <p style={{ fontSize: '11px', opacity: 0.75, fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase' }}>
+                Sua pontuação
+              </p>
+              <p style={{ fontSize: '13px', opacity: 0.9, marginTop: '4px' }}>
+                {myData?.user?.name || user?.user_metadata?.full_name || 'Jogador'}
+              </p>
+            </div>
+            <div style={{
+              fontFamily: "'Bebas Neue', sans-serif",
+              fontSize: '14px',
+              opacity: 0.6,
+              letterSpacing: '2px',
+            }}>
+              2026
+            </div>
           </div>
-          <div className="text-[10px] opacity-75 tracking-wider">
-            {myPosition ? 'lugar' : 'sem pts'}
-          </div>
-        </div>
-      </div>
 
-      {/* Ranking */}
-      <div className="px-5">
-        <div className="text-[10px] text-bolao-muted font-semibold tracking-[0.1em] uppercase mb-3">
-          Ranking do bolão
-        </div>
-
-        <div className="flex flex-col gap-2">
-          {ranking.map((row, index) => {
-            const isMe = row.user_id === user?.id;
-            const position = index + 1;
-
-            return (
-              <div
-                key={row.user_id}
-                className={`flex items-center gap-3 p-3 rounded-xl border transition-colors ${
-                  isMe
-                    ? 'bg-bolao-green-light border-bolao-green-mid'
-                    : 'bg-bolao-bg-card border-bolao-border'
-                }`}
-              >
-                <div className={`font-mono text-xs w-4 text-center shrink-0 font-semibold ${
-                  position === 1 ? 'text-yellow-600' :
-                  position === 2 ? 'text-gray-500' :
-                  position === 3 ? 'text-amber-700' :
-                  'text-bolao-muted'
-                }`}>
-                  {position}
-                </div>
-                <div className={`w-9 h-9 rounded-full bg-bolao-bg border-2 flex items-center justify-center overflow-hidden shrink-0 text-base ${
-                  isMe ? 'border-bolao-green' : 'border-bolao-border'
-                }`}>
-                  {row.user?.avatar_url ? (
-                    <img src={row.user.avatar_url} alt={row.user.name} className="w-full h-full object-cover" />
-                  ) : (
-                    AVATARS[index] ?? '👤'
-                  )}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="text-sm font-medium flex items-center gap-1 truncate">
-                    {row.user?.name || 'Sem nome'}
-                    {isMe && <span className="text-[10px] text-bolao-green font-bold shrink-0">(você)</span>}
-                  </div>
-                </div>
-                <div className={`font-mono text-[15px] font-medium ${isMe ? 'text-bolao-gold' : 'text-bolao-green'}`}>
-                  {row.total_points}
-                </div>
+          <div className="flex items-end justify-between mt-4 relative z-10">
+            <div>
+              <span style={{
+                fontFamily: "'DM Mono', monospace",
+                fontSize: '42px',
+                fontWeight: 700,
+                lineHeight: 1,
+              }}>
+                {myData?.total_points ?? 0}
+              </span>
+              <span style={{ fontSize: '14px', opacity: 0.7, marginLeft: '4px' }}>pts</span>
+            </div>
+            <div className="text-right">
+              <div style={{
+                fontFamily: "'DM Mono', monospace",
+                fontSize: '24px',
+                fontWeight: 600,
+              }}>
+                {myPosition ? `${myPosition}º` : '–'}
               </div>
-            );
-          })}
+              <div style={{ fontSize: '11px', opacity: 0.7 }}>
+                {myPosition ? 'lugar' : 'sem pts'}
+              </div>
+            </div>
+          </div>
 
-          {ranking.length === 0 && (
-            <div className="text-center p-6 text-bolao-muted text-sm border border-dashed border-bolao-border rounded-xl">
-              Ninguém pontuou ainda. Seja o primeiro!
+          {/* Progress bar */}
+          {maxPoints > 0 && (
+            <div className="progress-bar mt-4 relative z-10" style={{ background: 'rgba(255,255,255,0.2)' }}>
+              <div className="progress-bar-fill" style={{
+                width: `${Math.min(100, ((myData?.total_points ?? 0) / maxPoints) * 100)}%`,
+                background: 'rgba(255,255,255,0.5)',
+              }} />
             </div>
           )}
         </div>
-      </div>
 
-      {/* Banner pré-Copa — visível apenas antes do 1º jogo */}
-      {showPreCopaBanner && (
-        <div className="mx-5 bg-bolao-bg-card border border-bolao-border rounded-2xl p-5 flex flex-col gap-4 shadow-sm">
-          
-          {/* Cabeçalho do Banner */}
-          <div className="flex items-start gap-3">
-            <div className="w-6 h-5 flex items-center justify-center shrink-0 text-lg">
-              ⏳
-            </div>
-            <div className="flex-1">
-              <div className="text-[11px] font-bold text-bolao-text tracking-wide uppercase leading-tight">
-                A Copa ainda não começou
-              </div>
-              <div className="text-[11px] text-bolao-muted mt-1 leading-normal">
-                Você começará a pontuar assim que a bola rolar!
-              </div>
-            </div>
+        {/* Ranking preview */}
+        <div className="glass-card p-4 mb-4 animate-slide-up" style={{ animationDelay: '0.1s' }}>
+          <h2 style={{
+            fontFamily: "'Bebas Neue', sans-serif",
+            fontSize: '20px',
+            letterSpacing: '1px',
+            color: 'var(--text)',
+            marginBottom: '12px',
+          }}>
+            Ranking do bolão
+          </h2>
+
+          <div className="flex flex-col gap-2 stagger-children">
+            {ranking.map((row, index) => {
+              const isMe = row.user_id === user?.id;
+              const position = index + 1;
+
+              return (
+                <div key={row.user_id}
+                  className={`flex items-center gap-3 p-2.5 rounded-xl transition-all ${
+                    isMe ? 'border border-[var(--green-mid)]' : ''
+                  }`}
+                  style={{
+                    background: isMe ? 'rgba(232,245,239,0.6)' : 'transparent',
+                  }}>
+                  {/* Position / Medal */}
+                  <div className="w-7 text-center flex-shrink-0">
+                    {index < 3 ? (
+                      <span style={{ fontSize: '16px' }}>{MEDALS[index]}</span>
+                    ) : (
+                      <span className="p-num">{position}</span>
+                    )}
+                  </div>
+
+                  {/* Avatar */}
+                  <div className={`p-av ${isMe ? 'me' : ''}`}>
+                    {row.user?.avatar_url ? (
+                      <img src={row.user.avatar_url} alt={row.user.name}
+                        className="w-full h-full rounded-full object-cover" />
+                    ) : (
+                      AVATARS[index] ?? '👤'
+                    )}
+                  </div>
+
+                  {/* Name */}
+                  <div className="flex-1 min-w-0">
+                    <p className="p-name truncate">
+                      {row.user?.name || 'Sem nome'}
+                      {isMe && (
+                        <span style={{
+                          fontSize: '9px',
+                          fontWeight: 700,
+                          color: 'var(--green)',
+                          background: 'var(--green-light)',
+                          padding: '1px 6px',
+                          borderRadius: '10px',
+                          marginLeft: '6px',
+                        }}>
+                          você
+                        </span>
+                      )}
+                    </p>
+                  </div>
+
+                  {/* Points */}
+                  <div className="p-pts gr flex-shrink-0">{row.total_points}</div>
+                </div>
+              );
+            })}
           </div>
 
-          {/* Lista de Dicas */}
-          <div className="flex flex-col gap-4">
-            
-            {/* Item: Jogos */}
-            <div className="flex items-start gap-3">
-              <div className="w-6 h-5 flex items-center justify-center shrink-0 text-bolao-green text-sm font-bold">
-                ⚽
-              </div>
-              <div className="flex-1">
-                <div className="text-[12px] font-bold text-bolao-text leading-tight">Aba Jogos</div>
-                <div className="text-[11px] text-bolao-muted mt-1 leading-normal">
-                  Pode palpitar quando quiser, mas 10 minutos antes de cada partida os jogos travam.
-                </div>
-              </div>
+          {ranking.length === 0 && (
+            <div className="text-center py-8">
+              <p style={{ fontSize: '28px', marginBottom: '8px' }}>🏟️</p>
+              <p style={{ color: 'var(--muted)', fontSize: '13px' }}>
+                Ninguém pontuou ainda. Seja o primeiro!
+              </p>
             </div>
-
-            {/* Item: Especiais */}
-            <div className="flex items-start gap-3">
-              <div className="w-6 h-5 flex items-center justify-center shrink-0 text-bolao-gold text-sm font-bold">
-                ★
-              </div>
-              <div className="flex-1">
-                <div className="text-[12px] font-bold text-bolao-text leading-tight">Aba Especiais</div>
-                <div className="text-[11px] text-bolao-muted mt-1 leading-normal">
-                  Vote nos classificados por grupo, times da final, campeão e artilheiro antes do primeiro jogo.
-                </div>
-              </div>
-            </div>
-
-          </div>
+          )}
         </div>
-      )}
 
-      {/* Logout discreto */}
-      <div className="px-5 mt-2">
-        <button
-          onClick={handleLogout}
-          className="w-full py-2.5 flex items-center justify-center gap-2 text-[11px] text-bolao-muted border border-bolao-border rounded-xl bg-bolao-bg-card hover:bg-bolao-bg active:opacity-70 transition-colors"
-        >
-          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-          </svg>
+        {/* Pre-Copa banner */}
+        {showPreCopaBanner && (
+          <div className="glass-card p-5 mb-4 animate-slide-up" style={{ animationDelay: '0.2s' }}>
+            <div className="flex items-start gap-3 mb-4">
+              <div className="w-10 h-10 rounded-xl flex items-center justify-center text-xl flex-shrink-0"
+                style={{ background: 'var(--gold-light)', border: '1px solid var(--gold-border)' }}>
+                ⏳
+              </div>
+              <div>
+                <h3 style={{ fontSize: '15px', fontWeight: 700 }}>A Copa ainda não começou</h3>
+                <p style={{ color: 'var(--muted)', fontSize: '12px', marginTop: '2px' }}>
+                  Você começará a pontuar assim que a bola rolar!
+                </p>
+              </div>
+            </div>
+
+            <div className="flex flex-col gap-3">
+              <div className="flex items-start gap-3 p-3 rounded-xl"
+                style={{ background: 'var(--green-light)', border: '1px solid var(--green-mid)' }}>
+                <span className="text-lg flex-shrink-0">⚽</span>
+                <div>
+                  <p style={{ fontSize: '13px', fontWeight: 700, color: 'var(--green)' }}>Aba Jogos</p>
+                  <p style={{ fontSize: '11.5px', color: 'var(--muted)', marginTop: '2px' }}>
+                    Pode palpitar quando quiser, mas 10 minutos antes de cada partida os jogos travam.
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-start gap-3 p-3 rounded-xl"
+                style={{ background: 'var(--gold-light)', border: '1px solid var(--gold-border)' }}>
+                <span className="text-lg flex-shrink-0">★</span>
+                <div>
+                  <p style={{ fontSize: '13px', fontWeight: 700, color: 'var(--gold)' }}>Aba Especiais</p>
+                  <p style={{ fontSize: '11.5px', color: 'var(--muted)', marginTop: '2px' }}>
+                    Vote nos classificados por grupo, times da final, campeão e artilheiro antes do primeiro jogo.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Logout */}
+        <button onClick={handleLogout}
+          className="w-full py-3 text-center mb-6 rounded-xl transition-all active:scale-95"
+          style={{
+            fontSize: '13px',
+            color: 'var(--muted)',
+            background: 'transparent',
+            border: '1px solid var(--border)',
+          }}>
           Sair da conta
         </button>
       </div>
-
     </div>
   );
 }

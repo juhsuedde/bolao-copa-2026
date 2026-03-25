@@ -13,6 +13,7 @@ type LeaderboardEntry = {
 };
 
 const AVATARS = ['🦁', '🐯', '🦊', '⚡', '🌙', '🎯', '🔥', '🐉', '🦅', '🌟'];
+const MEDALS = ['🥇', '🥈', '🥉'];
 
 export default function Ranking() {
   const { user } = useAuth();
@@ -43,89 +44,120 @@ export default function Ranking() {
     fetchRanking();
   }, [showToast]);
 
-  const rankColor = (i: number) => {
-    if (i === 0) return 'g1';
-    if (i === 1) return 'g2';
-    if (i === 2) return 'g3';
-    return '';
-  };
+  const maxPoints = leaderboard.length > 0 ? leaderboard[0].total_points : 1;
 
   if (loading) return (
-    <div className="p-6 text-bolao-muted flex justify-center mt-10">Carregando ranking...</div>
+    <div className="flex-1 flex items-center justify-center animate-fade-in">
+      <div className="text-center">
+        <div className="text-3xl mb-2 animate-pulse-glow inline-block">📊</div>
+        <p style={{ color: 'var(--muted)', fontSize: '13px' }}>Carregando ranking...</p>
+      </div>
+    </div>
   );
 
   return (
-    <div className="flex flex-col pb-20">
-      <div className="px-5 pt-5 pb-0 flex items-center justify-between bg-bolao-bg">
-        <h1 className="text-3xl font-display text-bolao-text tracking-wide">Ranking</h1>
-        <div className="text-[11px] font-semibold bg-bolao-green-light text-bolao-green px-3 py-1 rounded-full border border-bolao-green-mid">
-          {leaderboard.length} jogadores
-        </div>
+    <div className="flex flex-col h-full" style={{ background: 'var(--bg)' }}>
+      <div className="screen-header">
+        <h1 className="screen-title">Ranking</h1>
+        <span className="hchip green">{leaderboard.length} jogadores</span>
       </div>
 
-      <div className="rklist">
+      <div className="scroll">
         {leaderboard.length === 0 && (
-          <div className="text-center p-10 text-bolao-muted text-sm">
-            Nenhuma pontuação registrada ainda.
+          <div className="text-center py-16 animate-fade-in">
+            <p style={{ fontSize: '36px', marginBottom: '12px' }}>🏟️</p>
+            <p style={{ color: 'var(--muted)', fontSize: '14px' }}>
+              Nenhuma pontuação registrada ainda.
+            </p>
           </div>
         )}
 
-        {leaderboard.map((entry, index) => {
-          const isMe = entry.user_id === user?.id;
-          const isExpanded = expanded === entry.user_id;
+        <div className="rklist stagger-children">
+          {leaderboard.map((entry, index) => {
+            const isMe = entry.user_id === user?.id;
+            const isExpanded = expanded === entry.user_id;
 
-          return (
-            <div key={entry.user_id}>
-              <div
-                className={`rk-row ${isMe ? 'me' : ''} ${isExpanded ? 'expanded' : ''}`}
-                onClick={() => setExpanded(isExpanded ? null : entry.user_id)}
-              >
-                <div className={`p-num ${rankColor(index)}`}>{index + 1}</div>
-                <div className={`p-av ${isMe ? 'me' : ''}`}>
-                  {entry.user?.avatar_url ? (
-                    <img src={entry.user.avatar_url} className="w-full h-full object-cover rounded-full" alt={entry.user.name} />
-                  ) : (
-                    AVATARS[index] ?? '👤'
-                  )}
-                </div>
-                <div className="p-info">
-                  <div className="p-name">
-                    {entry.user?.name || 'Participante'}
-                    {isMe && <span className="text-[10px] text-bolao-green font-bold ml-1">você</span>}
+            return (
+              <div key={entry.user_id}>
+                <div
+                  onClick={() => setExpanded(isExpanded ? null : entry.user_id)}
+                  className={`rk-row ${isMe ? 'me' : ''} ${isExpanded ? 'expanded' : ''}`}
+                >
+                  {/* Position */}
+                  <div className="w-7 text-center flex-shrink-0">
+                    {index < 3 ? (
+                      <span style={{ fontSize: '18px' }}>{MEDALS[index]}</span>
+                    ) : (
+                      <span className="p-num">{index + 1}</span>
+                    )}
                   </div>
-                  <div className="p-det">
-                    {entry.match_points} pts jogos · {entry.group_points} pts grupos
-                  </div>
-                </div>
-                <div className="p-right">
-                  <div className={`p-pts ${index < 3 && !isMe ? 'gr' : ''} ${isMe ? 'go' : ''}`}>
-                    {entry.total_points}
-                  </div>
-                </div>
-                <div className={`chev ${isExpanded ? 'open' : ''}`}>▼</div>
-              </div>
 
-              <div className={`rk-exp ${isExpanded ? 'open' : ''}`}>
-                <div className="bd-row">
-                  <div className="bd-l">Grupos acertados</div>
-                  <div className="bd-v">+{entry.group_points} pts</div>
+                  {/* Avatar */}
+                  <div className={`p-av ${isMe ? 'me' : ''}`}>
+                    {entry.user?.avatar_url ? (
+                      <img src={entry.user.avatar_url} alt={entry.user.name}
+                        className="w-full h-full rounded-full object-cover" />
+                    ) : (
+                      AVATARS[index] ?? '👤'
+                    )}
+                  </div>
+
+                  {/* Info */}
+                  <div className="p-info">
+                    <div className="p-name">
+                      {entry.user?.name || 'Participante'}
+                      {isMe && (
+                        <span style={{
+                          fontSize: '9px', fontWeight: 700, color: 'var(--green)',
+                          background: 'var(--green-light)', padding: '1px 6px',
+                          borderRadius: '10px', marginLeft: '6px',
+                        }}>
+                          você
+                        </span>
+                      )}
+                    </div>
+                    <div className="p-det">
+                      {entry.match_points} pts jogos · {entry.group_points} pts grupos
+                    </div>
+                    {/* Progress bar */}
+                    {maxPoints > 0 && (
+                      <div className="progress-bar mt-1.5" style={{ width: '80%' }}>
+                        <div className="progress-bar-fill"
+                          style={{ width: `${Math.min(100, (entry.total_points / maxPoints) * 100)}%` }} />
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Points */}
+                  <div className="p-pts gr">{entry.total_points}</div>
+
+                  {/* Chevron */}
+                  <span className={`chev ${isExpanded ? 'open' : ''}`}>▼</span>
                 </div>
-                <div className="bd-row">
-                  <div className="bd-l">Palpites de jogos</div>
-                  <div className="bd-v">+{entry.match_points} pts</div>
-                </div>
-                <div className="bd-row">
-                  <div className="bd-l">Especiais</div>
-                  <div className="bd-v">+{entry.special_points} pts</div>
-                </div>
-                <div className="bd-row">
-                  <div className="bd-l total">Total</div>
-                  <div className="bd-v total">{entry.total_points} pts</div>
+
+                {/* Expanded details */}
+                <div className={`rk-exp ${isExpanded ? 'open' : ''}`}>
+                  <div className="bd-row">
+                    <span className="bd-l">Grupos acertados</span>
+                    <span className="bd-v">+{entry.group_points} pts</span>
+                  </div>
+                  <div className="bd-row">
+                    <span className="bd-l">Palpites de jogos</span>
+                    <span className="bd-v">+{entry.match_points} pts</span>
+                  </div>
+                  <div className="bd-row">
+                    <span className="bd-l">Especiais</span>
+                    <span className="bd-v">+{entry.special_points} pts</span>
+                  </div>
+                  <div className="bd-row">
+                    <span className="bd-l total">Total</span>
+                    <span className="bd-v total">{entry.total_points} pts</span>
+                  </div>
                 </div>
               </div>
-            </div>
-          );
-        })}
+            );
+          })}
+        </div>
       </div>
     </div>
   );
