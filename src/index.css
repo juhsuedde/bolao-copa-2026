@@ -286,13 +286,34 @@
 
 .gmini { background: var(--bg3); border: 1px solid var(--border); border-radius: var(--radius-sm); overflow: hidden; }
 
-.gmini-h { display: flex; align-items: center; justify-content: space-between; padding: 4px 10px; }
-.gml { font-family: 'Bebas Neue', sans-serif; font-size: 14px; color: var(--green); }
-.gmp { font-size: 9px; color: var(--muted); font-family: 'DM Mono', monospace; }
+.gmini-h { 
+  display: flex; 
+  align-items: center; 
+  justify-content: space-between; 
+  padding: 6px 10px;
+  min-height: 28px;
+}
+.gml { 
+  font-family: 'Bebas Neue', sans-serif; 
+  font-size: 14px; 
+  color: var(--green); 
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  padding-top: 1px;
+}
+.gmp { 
+  font-size: 9px; 
+  color: var(--muted); 
+  font-family: 'DM Mono', monospace; 
+  line-height: 1;
+  display: flex;
+  align-items: center;
+}
 .gmp strong { color: var(--gold); }
 
 /* Linha de palpite dentro do grupo */
-.gprow { display: flex; align-items: center; gap: 6px; padding: 5px 10px; border-top: 1px solid var(--border); background: var(--bg2); cursor: pointer; transition: background 0.12s; }
+.gprow { display: flex; align-items: center; gap: 6px; padding: 6px 10px; border-top: 1px solid var(--border); background: var(--bg2); cursor: pointer; transition: background 0.12s; }
 .gprow:active { background: var(--bg3); }
 
 .gppos { font-size: 9px; font-weight: 800; color: var(--muted); width: 12px; opacity: 0.55; flex-shrink: 0; }
