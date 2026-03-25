@@ -93,6 +93,11 @@ export default function Especiais() {
     return teams.find(t => t.id === teamId)?.name || null;
   };
 
+  const getTeamCode = (teamId: string | null) => {
+  if (!teamId) return null;
+  return teamId.toUpperCase();
+    };
+
   const renderTeamFlag = (teamName: string | null) => {
     const team = teams.find(t => t.name === teamName);
     if (team?.flag_url) {
@@ -113,7 +118,7 @@ export default function Especiais() {
     const pick2 = picks[`group_${grupo.toLowerCase()}_2`];
     if (pick1?.team_id && pick2?.team_id) return '+6';
     if (pick1?.team_id || pick2?.team_id) return '+2';
-    return 'em andamento';
+    return '--';
   };
 
   const getStatusBadge = (teamName: string | null) => {
@@ -166,49 +171,67 @@ export default function Especiais() {
             {isGroupsExpanded && (
               <div className="gcont" style={{ padding: '10px 14px', borderTop: '1px solid var(--border)', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '7px' }}>
                 {ALL_GROUPS.map(grupo => {
-                  const team1Name = getTeamName(`group_${grupo.toLowerCase()}_1`);
-                  const team2Name = getTeamName(`group_${grupo.toLowerCase()}_2`);
-                  const points = getGroupPoints(grupo);
-                  const status1 = getStatusBadge(team1Name);
-                  const status2 = getStatusBadge(team2Name);
+                    // Pegamos os IDs das seleções escolhidas
+                    const pick1Id = picks[`group_${grupo.toLowerCase()}_1`]?.team_id;
+                    const pick2Id = picks[`group_${grupo.toLowerCase()}_2`]?.team_id;
+                    const points = getGroupPoints(grupo);
 
-                  return (
-                    <div key={grupo} className="gmini" style={{ background: 'var(--bg3)', border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)', overflow: 'hidden' }}>
-                      <div className="gmini-h" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 12px' }}>
-                        <div className="gml" style={{ fontFamily: 'Bebas Neue, sans-serif', fontSize: '15px', color: 'var(--green)' }}>Grupo {grupo}</div>
-                        <div className="gmp" style={{ fontSize: '10px', color: 'var(--muted)' }}>
-                          {points.includes('+') ? (
-                            <><strong style={{ fontFamily: 'DM Mono, monospace', color: 'var(--gold)' }}>{points}</strong> pts</>
-                          ) : points}
+                    return (
+                        <div key={grupo} className="gmini" style={{ background: 'var(--bg3)', border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)', overflow: 'hidden' }}>
+                        <div className="gmini-h" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '7px 10px' }}>
+                            <div style={{ fontFamily: 'Bebas Neue, sans-serif', fontSize: '14px', color: 'var(--green)' }}>Grupo {grupo}</div>
+                            <div style={{ fontSize: '9px', color: 'var(--muted)', fontFamily: 'DM Mono, monospace' }}>{points}</div>
                         </div>
-                      </div>
 
-                      <div className="gprow" onClick={() => openModal(`1º do Grupo ${grupo}`, `group_${grupo.toLowerCase()}_1`, 'team', grupo)} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '7px 12px', borderTop: '1px solid var(--border)', background: 'var(--bg2)', cursor: 'pointer' }}>
-                        <div className="gpf" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '24px' }}>
-                          {renderTeamFlag(team1Name)}
-                        </div>
-                        <div className="gpn" style={{ flex: 1, fontSize: '12px', fontWeight: 500, color: team1Name ? 'var(--text)' : 'var(--muted)' }}>
-                          {team1Name || 'Selecionar'}
-                        </div>
-                        <div className={status1.className} style={{ fontSize: '10px', fontWeight: 600, padding: '2px 7px', borderRadius: '20px', background: 'var(--bg3)', color: 'var(--muted)' }}>
-                          {status1.text}
-                        </div>
-                      </div>
+                        {[1, 2].map(pos => {
+                            const teamId = pos === 1 ? pick1Id : pick2Id;
+                            const teamData = teams.find(t => t.id === teamId);
 
-                      <div className="gprow" onClick={() => openModal(`2º do Grupo ${grupo}`, `group_${grupo.toLowerCase()}_2`, 'team', grupo)} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '7px 12px', borderTop: '1px solid var(--border)', background: 'var(--bg2)', cursor: 'pointer' }}>
-                        <div className="gpf" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '24px' }}>
-                          {renderTeamFlag(team2Name)}
+                            return (
+                            <div 
+                                key={pos} 
+                                onClick={() => openModal(`${pos}º do Grupo ${grupo}`, `group_${grupo.toLowerCase()}_${pos}`, 'team', grupo)}
+                                style={{ 
+                                display: 'flex', alignItems: 'center', gap: '8px', 
+                                padding: '8px 10px', borderTop: '1px solid var(--border)', 
+                                background: 'var(--bg2)', cursor: 'pointer' 
+                                }}
+                            >
+                                {/* Bandeira */}
+                                <div style={{ width: '22px', display: 'flex', justifyContent: 'center', shrink: 0 }}>
+                                {teamData?.flag_url ? (
+                                    <img src={teamData.flag_url} alt="" style={{ width: '100%', height: '14px', objectFit: 'cover', borderRadius: '2px' }} />
+                                ) : (
+                                    <span style={{ opacity: 0.3, fontSize: '12px' }}>?</span>
+                                )}
+                                </div>
+
+                                {/* Código de 3 letras (Estilo Placar) */}
+                                <div style={{ 
+                                flex: 1, fontSize: '10px', fontWeight: 700, 
+                                fontFamily: 'DM Mono, monospace', // Fonte mono para parecer placar mesmo
+                                color: teamId ? 'var(--text)' : 'var(--muted)',
+                                letterSpacing: '0.05em'
+                                }}>
+                                {getTeamCode(teamId) || 'selecione'}
+                                </div>
+
+                                {/* Status (Check/Interrogação) */}
+                                <div style={{ 
+                                fontSize: '9px', width: '16px', height: '16px', borderRadius: '4px', 
+                                background: teamId ? 'var(--green-light)' : 'var(--bg3)', 
+                                display: 'flex', alignItems: 'center', justifyContent: 'center', 
+                                color: teamId ? 'var(--green)' : 'var(--muted)',
+                                border: teamId ? '1px solid var(--green-mid)' : '1px solid var(--border)'
+                                }}>
+                                {teamId ? '✓' : 'x'}
+                                </div>
+                            </div>
+                            );
+                        })}
                         </div>
-                        <div className="gpn" style={{ flex: 1, fontSize: '12px', fontWeight: 500, color: team2Name ? 'var(--text)' : 'var(--muted)' }}>
-                          {team2Name || 'Selecionar'}
-                        </div>
-                        <div className={status2.className} style={{ fontSize: '10px', fontWeight: 600, padding: '2px 7px', borderRadius: '20px', background: 'var(--bg3)', color: 'var(--muted)' }}>
-                          {status2.text}
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })}
+                    );
+                    })}
               </div>
             )}
           </div>
