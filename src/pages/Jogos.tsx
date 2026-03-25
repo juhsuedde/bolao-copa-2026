@@ -101,6 +101,7 @@ export default function Jogos() {
           home:teams!matches_home_team_fkey(name, group_name, flag_url),
           away:teams!matches_away_team_fkey(name, group_name, flag_url)
         `)
+        .eq('stage', 'group_stage') // <--- AQUI: Esconde o mata-mata automaticamente!
         .order('match_date', { ascending: true });
 
       if (matchesError) throw matchesError;
