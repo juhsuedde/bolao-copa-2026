@@ -1,61 +1,134 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '../lib/supabase';
 import { useAuth } from './useAuth';
 import type { Match, Pick, Filter, GroupFilter } from '../types';
 
-export function useMatches() {
-  const { user } = useAuth();
-  const [matches, setMatches] = useState<Match[]>([]);
-  const [userPicks, setUserPicks] = useState<Record<string, Pick>>({});
-  const [loading, setLoading] = useState(true);
-  const [currentTime, setCurrentTime] = useState(new Date().getTime());
+const MATCHES_QUERY_KEY = ['matches'];
+const PICKS_QUERY_KEY = ['userPicks'];
+
+async function fetchMatches() {
+  const { data, error } = await supabase
+    .from('matches')
+    .select(`
+      id, match_date, stage, home_score, away_score, home_team, away_team,
+      home:teams!matches_home_team_fkey(name, group_name, flag_url),
+      away:teams!matches_away_team_fkey(name, group_name, flag_url)
+    `)
+    .order('match_date', { ascending: true });
+
+  if (error) throw error;
+  return data as unknown as Match[];
+}
+
+async function fetchUserPicks(userId: string) {
+  const { data } = await supabase
+    .from('match_picks')
+    .select('match_id, home_score, away_score, points, extra_time_winner, penalties_winner')
+    .eq('user_id', userId);
+
+  if (!data) return {};
+  const picksMap: Record<string, Pick> = {};
+  data.forEach(pick => { picksMap[pick.match_id] = pick; });
+  return picksMap;
+}
+
+function useTimer() {
+  const [tick, setTick] = useState(0);
+  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
-    const timer = setInterval(() => setCurrentTime(new Date().getTime()), 60000);
-    return () => clearInterval(timer);
+    const scheduleNext = () => {
+      const now = Date.now();
+      const nextMinute = Math.ceil(now / 60000) * 60000;
+      const delay = nextMinute - now;
+
+      if (timeoutRef.current) clearTimeout(timeoutRef.current);
+
+      timeoutRef.current = setTimeout(() => {
+        setTick(t => t + 1);
+        scheduleNext();
+      }, delay);
+    };
+
+    scheduleNext();
+
+    return () => {
+      if (timeoutRef.current) clearTimeout(timeoutRef.current);
+    };
   }, []);
 
-  const fetchData = useCallback(async () => {
-    if (!user) return;
-    setLoading(true);
-    try {
-      const { data: matchesData, error: matchesError } = await supabase
-        .from('matches')
-        .select(`
-          id, match_date, stage, home_score, away_score, home_team, away_team,
-          home:teams!matches_home_team_fkey(name, group_name, flag_url),
-          away:teams!matches_away_team_fkey(name, group_name, flag_url)
-        `)
-        .order('match_date', { ascending: true });
+  return tick;
+}
 
-      if (matchesError) throw matchesError;
-      if (matchesData) setMatches(matchesData as unknown as Match[]);
+export function useMatches() {
+  const { user } = useAuth();
+  const queryClient = useQueryClient();
 
-      const { data: picksData } = await supabase
-        .from('match_picks')
-        .select('match_id, home_score, away_score, points, extra_time_winner, penalties_winner')
-        .eq('user_id', user.id);
+  const { data: matches = [], isLoading: loadingMatches } = useQuery({
+    queryKey: MATCHES_QUERY_KEY,
+    queryFn: fetchMatches,
+    staleTime: 5 * 60 * 1000,
+    refetchOnWindowFocus: false,
+  });
 
-      if (picksData) {
-        const picksMap: Record<string, Pick> = {};
-        picksData.forEach(pick => { picksMap[pick.match_id] = pick; });
-        setUserPicks(picksMap);
+  const { data: userPicks = {} as Record<string, Pick>, isLoading: loadingPicks } = useQuery({
+    queryKey: PICKS_QUERY_KEY,
+    queryFn: () => user ? fetchUserPicks(user.id) : Promise.resolve({} as Record<string, Pick>),
+    enabled: !!user,
+    staleTime: 30 * 1000,
+  });
+
+  const savePickMutation = useMutation({
+    mutationFn: async ({
+      matchId,
+      homeScore,
+      awayScore,
+      extraTimeWinner,
+      penaltiesWinner
+    }: {
+      matchId: string;
+      homeScore: number;
+      awayScore: number;
+      extraTimeWinner: string | null;
+      penaltiesWinner: string | null;
+    }) => {
+      if (!user) throw new Error('Not authenticated');
+      
+      const match = matches.find(m => m.id === matchId);
+      const matchTime = match ? new Date(match.match_date).getTime() : 0;
+      const lockTime = matchTime - 10 * 60 * 1000;
+      
+      if (Date.now() >= lockTime) {
+        throw new Error('Tempo esgotado!');
       }
-    } catch (err) {
-      console.error('Erro na busca:', err);
-    } finally {
-      setLoading(false);
-    }
-  }, [user]);
 
-  useEffect(() => { fetchData(); }, [fetchData]);
+      const { error } = await supabase
+        .from('match_picks')
+        .upsert({
+          user_id: user.id,
+          match_id: matchId,
+          home_score: homeScore,
+          away_score: awayScore,
+          extra_time_winner: extraTimeWinner,
+          penalties_winner: penaltiesWinner,
+        }, { onConflict: 'user_id,match_id' });
 
-  const isMatchLocked = (matchDate: string) => {
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: PICKS_QUERY_KEY });
+    },
+  });
+
+  const timerTick = useTimer();
+
+  const isMatchLocked = useCallback((matchDate: string) => {
     if (!matchDate) return false;
-    return currentTime >= new Date(matchDate).getTime() - 10 * 60 * 1000;
-  };
+    return Date.now() >= new Date(matchDate).getTime() - 10 * 60 * 1000;
+  }, [timerTick]);
 
-  const isToday = (dateStr: string) => {
+  const isToday = useCallback((dateStr: string) => {
     if (!dateStr) return false;
     const d = new Date(dateStr);
     const today = new Date();
@@ -64,9 +137,9 @@ export function useMatches() {
       d.getMonth() === today.getMonth() &&
       d.getFullYear() === today.getFullYear()
     );
-  };
+  }, []);
 
-  const isFirstMatchDay = (dateStr: string) => {
+  const isFirstMatchDay = useCallback((dateStr: string) => {
     if (!dateStr) return false;
     const d = new Date(dateStr);
     const first = new Date('2026-06-11T16:00:00Z');
@@ -75,51 +148,44 @@ export function useMatches() {
       d.getMonth() === first.getMonth() &&
       d.getFullYear() === first.getFullYear()
     );
-  };
+  }, []);
 
-  const isLive = (dateStr: string) => {
+  const isLive = useCallback((dateStr: string) => {
     if (!dateStr) return false;
     const start = new Date(dateStr).getTime();
-    return currentTime >= start && currentTime <= start + 110 * 60 * 1000;
-  };
+    const now = Date.now();
+    return now >= start && now <= start + 110 * 60 * 1000;
+  }, [timerTick]);
 
-  const liveMinute = (dateStr: string) => {
+  const liveMinute = useCallback((dateStr: string) => {
     if (!dateStr) return 0;
-    return Math.min(90, Math.floor((currentTime - new Date(dateStr).getTime()) / 60000));
-  };
+    return Math.min(90, Math.floor((Date.now() - new Date(dateStr).getTime()) / 60000));
+  }, [timerTick]);
 
-  const formatTime = (dateStr: string) => {
+  const formatTime = useCallback((dateStr: string) => {
     if (!dateStr) return '';
     return new Date(dateStr).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
-  };
+  }, []);
 
-  const savePick = async (
+  const savePick = useCallback((
     matchId: string,
     homeScore: number,
     awayScore: number,
     extraTimeWinner: string | null,
     penaltiesWinner: string | null
   ) => {
-    if (!user) return;
-    const match = matches.find(m => m.id === matchId);
-    if (match && isMatchLocked(match.match_date)) { alert('Tempo esgotado!'); return; }
-    const { error } = await supabase
-      .from('match_picks')
-      .upsert({
-        user_id: user.id,
-        match_id: matchId,
-        home_score: homeScore,
-        away_score: awayScore,
-        extra_time_winner: extraTimeWinner,
-        penalties_winner: penaltiesWinner,
-      }, { onConflict: 'user_id,match_id' });
-    if (error) alert(error.message);
-    else fetchData();
-  };
+    return savePickMutation.mutateAsync({
+      matchId,
+      homeScore,
+      awayScore,
+      extraTimeWinner,
+      penaltiesWinner,
+    });
+  }, [savePickMutation]);
 
   const isGroupStageOver = matches.length > 0 && matches.every(m => m.stage !== 'group_stage');
 
-  const filterMatches = (filter: Filter, groupFilter: GroupFilter) => {
+  const filterMatches = useCallback((filter: Filter, groupFilter: GroupFilter) => {
     return matches.filter(m => {
       if (filter === 'proximos') return isFirstMatchDay(m.match_date);
       if (filter === 'hoje') return isToday(m.match_date);
@@ -130,9 +196,9 @@ export function useMatches() {
       }
       return true;
     });
-  };
+  }, [matches, isFirstMatchDay, isToday]);
 
-  const getCounts = (filter: Filter, groupFilter: GroupFilter) => {
+  const getCounts = useCallback((filter: Filter, groupFilter: GroupFilter) => {
     const filtered = filterMatches(filter, groupFilter);
     const todayCount = matches.filter(m => isToday(m.match_date)).length;
     const proximosCount = matches.filter(m => isFirstMatchDay(m.match_date)).length;
@@ -141,13 +207,12 @@ export function useMatches() {
       : matches.filter(m => !!m.home?.group_name).length;
 
     return { count: filtered.length, todayCount, proximosCount, groupCount };
-  };
+  }, [matches, filterMatches, isToday, isFirstMatchDay]);
 
   return {
     matches,
     userPicks,
-    loading,
-    currentTime,
+    loading: loadingMatches || loadingPicks,
     isMatchLocked,
     isToday,
     isFirstMatchDay,
@@ -158,6 +223,9 @@ export function useMatches() {
     isGroupStageOver,
     filterMatches,
     getCounts,
-    refetch: fetchData,
+    refetch: () => {
+      queryClient.invalidateQueries({ queryKey: MATCHES_QUERY_KEY });
+      queryClient.invalidateQueries({ queryKey: PICKS_QUERY_KEY });
+    },
   };
 }

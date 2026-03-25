@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useMemo } from 'react';
 import { useMatches } from '../hooks/useMatches';
 import ModalPalpite from '../components/ModalPalpite';
 import ModalResultadoJogo from '../components/ModalResultadoJogo';
@@ -80,7 +80,10 @@ export default function Jogos() {
   };
 
   const filteredMatches = filterMatches(filter, groupFilter);
-  const matchesByDay = filter === 'todos' ? groupByDay(matches) : [];
+  const matchesByDay = useMemo(
+    () => filter === 'todos' ? groupByDay(matches) : [],
+    [filter, matches]
+  );
 
   const { todayCount, proximosCount, groupCount } = {
     todayCount: matches.filter(m => isToday(m.match_date)).length,
