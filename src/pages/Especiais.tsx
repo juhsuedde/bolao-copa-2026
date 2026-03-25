@@ -8,12 +8,28 @@ type SpecialPick = { pick_category: string; team_id: string | null; pick_text: s
 
 const ALL_GROUPS = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L'];
 
+function abbrev(name: string | null): string {
+  if (!name) return '---';
+  const overrides: Record<string, string> = {
+    'Estados Unidos': 'EUA',
+    'Coreia do Sul': 'COR',
+    'Arábia Saudita': 'SAU',
+    'Costa Rica': 'CRC',
+    'República Checa': 'TCH',
+    'Bósnia e Herzegovina': 'BIH',
+    'Trinidad e Tobago': 'TRI',
+  };
+  if (overrides[name]) return overrides[name];
+  // Remove artigos e preposições, pega as 3 primeiras letras da primeira palavra significativa
+  const clean = name.replace(/^(da |de |do |das |dos |the )/i, '');
+  return clean.slice(0, 3).toUpperCase();
+}
+
 export default function Especiais() {
   const { user } = useAuth();
   const [teams, setTeams] = useState<Team[]>([]);
   const [picks, setPicks] = useState<Record<string, SpecialPick>>({});
   const [loading, setLoading] = useState(true);
-
   const [isGroupsExpanded, setIsGroupsExpanded] = useState(false);
 
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -22,45 +38,39 @@ export default function Especiais() {
     mode: 'team' as 'team' | 'text',
     category: '',
     currentSelection: '',
-    filterGroup: null as string | null
+    filterGroup: null as string | null,
   });
 
   const fetchData = useCallback(async () => {
     if (!user) return;
     setLoading(true);
-    
     try {
       const { data: teamsData, error: teamsError } = await supabase
         .from('teams')
         .select('id, name, group_name, flag_url')
         .order('name');
-        
-      if (teamsError) console.error("Erro ao buscar times:", teamsError);
-      
+      if (teamsError) console.error('Erro ao buscar times:', teamsError);
       if (teamsData) {
-        const formattedTeams = teamsData.map(t => ({
+        setTeams(teamsData.map(t => ({
           id: t.id,
           name: t.name,
           group_letter: t.group_name,
-          flag_url: t.flag_url
-        }));
-        setTeams(formattedTeams);
+          flag_url: t.flag_url,
+        })));
       }
-      
+
       const { data: picksData, error: picksError } = await supabase
         .from('special_picks')
         .select('pick_category, team_id, pick_text')
         .eq('user_id', user.id);
-        
-      if (picksError) console.error("Erro ao buscar palpites:", picksError);
-      
+      if (picksError) console.error('Erro ao buscar palpites:', picksError);
       if (picksData) {
-        const picksMap: Record<string, SpecialPick> = {};
-        picksData.forEach(pick => { picksMap[pick.pick_category] = pick; });
-        setPicks(picksMap);
+        const map: Record<string, SpecialPick> = {};
+        picksData.forEach(p => { map[p.pick_category] = p; });
+        setPicks(map);
       }
     } catch (err) {
-      console.error("Erro geral na busca:", err);
+      console.error('Erro geral na busca:', err);
     } finally {
       setLoading(false);
     }
@@ -68,9 +78,14 @@ export default function Especiais() {
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
-  const openModal = (title: string, category: string, mode: 'team' | 'text', filterGroup: string | null = null) => {
-    const currentPick = picks[category];
-    const currentSelection = mode === 'team' ? currentPick?.team_id || '' : currentPick?.pick_text || '';
+  const openModal = (
+    title: string,
+    category: string,
+    mode: 'team' | 'text',
+    filterGroup: string | null = null
+  ) => {
+    const current = picks[category];
+    const currentSelection = mode === 'team' ? current?.team_id || '' : current?.pick_text || '';
     setModalConfig({ title, category, mode, currentSelection, filterGroup });
     setIsModalOpen(true);
   };
@@ -87,278 +102,220 @@ export default function Especiais() {
     fetchData();
   };
 
-  const getTeamName = (categoryId: string) => {
-    const teamId = picks[categoryId]?.team_id;
-    return teams.find(t => t.id === teamId)?.name || null;
+  const getTeamById = (teamId: string | null | undefined) =>
+    teams.find(t => t.id === teamId) ?? null;
+
+  const getTeamByCategory = (category: string) =>
+    getTeamById(picks[category]?.team_id ?? null);
+
+  // Status badge para linha de grupo: ok / no / pend / add
+  const getGroupPickStatus = (teamId: string | null | undefined): 'ok' | 'no' | 'pend' | 'add' => {
+    if (!teamId) return 'add';
+    // Futuramente: comparar com resultado real do grupo
+    // Por ora: se tem palpite, mostra pend (aguardando) ou ok/no quando resultado disponível
+    return 'pend';
   };
 
-  const getTeamCode = (teamId: string | null) => {
-    if (!teamId) return null;
-    return teamId.toUpperCase();
+  const getGroupPts = (grupo: string) => {
+    const p1 = picks[`group_${grupo.toLowerCase()}_1`];
+    const p2 = picks[`group_${grupo.toLowerCase()}_2`];
+    if (p1?.team_id && p2?.team_id) return { value: '+6', hasValue: true };
+    if (p1?.team_id || p2?.team_id) return { value: '+2', hasValue: true };
+    return { value: '--', hasValue: false };
   };
 
-  const renderTeamFlag = (teamName: string | null) => {
-    const team = teams.find(t => t.name === teamName);
-    if (team?.flag_url) {
-      return (
-        <img 
-          src={team.flag_url} 
-          alt={teamName || 'Bandeira'} 
-          className="w-6 h-4 object-cover rounded shadow-sm border border-bolao-border" 
-          style={{ width: '24px', height: '16px' }}
-        />
-      );
-    }
-    return <span style={{ opacity: 0.3, fontSize: '16px' }}>?</span>;
-  };
-
-  const getGroupPoints = (grupo: string) => {
-    const pick1 = picks[`group_${grupo.toLowerCase()}_1`];
-    const pick2 = picks[`group_${grupo.toLowerCase()}_2`];
-    if (pick1?.team_id && pick2?.team_id) return '+6';
-    if (pick1?.team_id || pick2?.team_id) return '+2';
-    return '--';
-  };
-
-  if (loading) return <div className="p-10 text-center uppercase font-display text-xs tracking-widest text-bolao-muted">Carregando...</div>;
+  if (loading) return (
+    <div className="p-10 text-center uppercase font-display text-xs tracking-widest text-bolao-muted">
+      Carregando...
+    </div>
+  );
 
   return (
     <div className="flex flex-col gap-5 pb-24">
-      
-      <div className="screen-header" style={{ padding: '14px 20px 0', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0, background: 'var(--bg)' }}>
-        <div className="screen-title" style={{ fontFamily: 'Bebas Neue, sans-serif', fontSize: '30px', letterSpacing: '1px', lineHeight: 1 }}>Especiais</div>
-        <div className="hchip gold" style={{ 
-          fontSize: '11px', fontWeight: 600, padding: '4px 10px', borderRadius: '20px', letterSpacing: '0.04em',
-          background: 'var(--gold-light)', border: '1px solid var(--gold-border)', color: 'var(--gold)' 
-        }}>fecha em 2d 14h</div>
+
+      {/* Header */}
+      <div className="screen-header">
+        <div className="screen-title">Especiais</div>
+        <div className="hchip gold">fecha em 2d 14h</div>
       </div>
 
-      <div className="scroll" style={{ flex: 1, overflowY: 'auto', overflowX: 'hidden', paddingBottom: '16px' }}>
-        <div className="esplist" style={{ padding: '10px 20px', display: 'flex', flexDirection: 'column', gap: '9px' }}>
+      <div className="esplist">
 
-          <div className="ecard" style={{ background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', overflow: 'hidden' }}>
-            
-            <div 
-              className="ecard-h" 
-              onClick={() => setIsGroupsExpanded(!isGroupsExpanded)}
-              style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '11px 14px 9px', cursor: 'pointer' }}
+        {/* ── CLASSIFICADOS POR GRUPO ─────────────────────── */}
+        <div className="ecard">
+          <div className="ecard-h toggle" onClick={() => setIsGroupsExpanded(v => !v)}>
+            <div>
+              <div className="ecard-t">Times classificados por grupo</div>
+              <div className="ecard-sub">até 72 pts · 6 pts por grupo exato</div>
+            </div>
+            <svg
+              className={`w-4 h-4 text-bolao-muted transition-transform ${isGroupsExpanded ? '' : 'rotate-180'}`}
+              fill="currentColor" viewBox="0 0 20 20"
             >
-              <div>
-                <div className="ecard-t" style={{ fontSize: '11px', fontWeight: 600, color: 'var(--muted)', letterSpacing: '0.08em', textTransform: 'uppercase' }}>
-                  Times classificados por grupo
-                </div>
-                <div style={{ fontSize: '11px', color: 'var(--muted)', marginTop: '3px' }}>até 72 pts · 6 pts por grupo exato</div>
-              </div>
-              
-              <div style={{ padding: '4px' }}>
-                <svg className={`w-4 h-4 text-bolao-muted transform transition-transform ${isGroupsExpanded ? '' : 'rotate-180'}`} fill="currentColor" viewBox="0 0 20 20">
-                  <path fillRule="evenodd" d="M14.707 12.707a1 1 0 01-1.414 0L10 9.414l-3.293 3.293a1 1 0 01-1.414-1.414l4-4a1 1 0 011.414 0l4 4a1 1 0 010 1.414z" clipRule="evenodd" />
-                </svg>
-              </div>
-            </div>
+              <path fillRule="evenodd" d="M14.707 12.707a1 1 0 01-1.414 0L10 9.414l-3.293 3.293a1 1 0 01-1.414-1.414l4-4a1 1 0 011.414 0l4 4a1 1 0 010 1.414z" clipRule="evenodd" />
+            </svg>
+          </div>
 
-            {isGroupsExpanded && (
-              <div className="gcont" style={{ padding: '10px 14px', borderTop: '1px solid var(--border)', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '7px' }}>
-                {ALL_GROUPS.map(grupo => {
-                    const pick1Id = picks[`group_${grupo.toLowerCase()}_1`]?.team_id;
-                    const pick2Id = picks[`group_${grupo.toLowerCase()}_2`]?.team_id;
-                    const points = getGroupPoints(grupo);
+          {isGroupsExpanded && (
+            <div className="gcont">
+              {ALL_GROUPS.map(grupo => {
+                const pick1Id = picks[`group_${grupo.toLowerCase()}_1`]?.team_id ?? null;
+                const pick2Id = picks[`group_${grupo.toLowerCase()}_2`]?.team_id ?? null;
+                const team1 = getTeamById(pick1Id);
+                const team2 = getTeamById(pick2Id);
+                const pts = getGroupPts(grupo);
 
-                    return (
-                        <div key={grupo} className="gmini" style={{ background: 'var(--bg3)', border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)', overflow: 'hidden' }}>
-                        <div className="gmini-h" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '4px 10px' }}>
-                            <div style={{ fontFamily: 'Bebas Neue, sans-serif', fontSize: '14px', color: 'var(--green)' }}>Grupo {grupo}</div>
-                            <div style={{ fontSize: '9px', color: 'var(--muted)', fontFamily: 'DM Mono, monospace' }}>{points}</div>
+                return (
+                  <div key={grupo} className="gmini">
+                    <div className="gmini-h">
+                      <div className="gml">Grupo {grupo}</div>
+                      <div className="gmp">
+                        {pts.hasValue ? <strong>{pts.value}</strong> : pts.value}
+                      </div>
+                    </div>
+
+                    {[
+                      { pos: 1, teamId: pick1Id, team: team1 },
+                      { pos: 2, teamId: pick2Id, team: team2 },
+                    ].map(({ pos, teamId, team }) => {
+                      const status = getGroupPickStatus(teamId);
+                      return (
+                        <div
+                          key={pos}
+                          className="gprow"
+                          onClick={() => openModal(
+                            `${pos}º do Grupo ${grupo}`,
+                            `group_${grupo.toLowerCase()}_${pos}`,
+                            'team',
+                            grupo
+                          )}
+                        >
+                          <div className="gppos">{pos}º</div>
+
+                          <div className={`gpflag ${teamId ? '' : 'empty'}`}>
+                            {team?.flag_url ? (
+                              <img src={team.flag_url} alt={team.name} />
+                            ) : (
+                              <span>?</span>
+                            )}
+                          </div>
+
+                          <div className={`gpname ${teamId ? '' : 'empty'}`}>
+                            {teamId ? abbrev(team?.name ?? null) : 'Sel.'}
+                          </div>
+
+                          <div className={`gpb ${status}`}>
+                            {status === 'ok'   ? '✓' :
+                             status === 'no'   ? '✗' :
+                             status === 'pend' ? '?' : '+'}
+                          </div>
                         </div>
-
-                        {[1, 2].map(pos => {
-                            const teamId = pos === 1 ? pick1Id : pick2Id;
-                            const teamData = teams.find(t => t.id === teamId);
-
-                            return (
-                                <div 
-                                key={pos} 
-                                onClick={() => openModal(`${pos}º do Grupo ${grupo}`, `group_${grupo.toLowerCase()}_${pos}`, 'team', grupo)}
-                                style={{ 
-                                    display: 'flex', 
-                                    alignItems: 'center', 
-                                    gap: '8px', 
-                                    padding: '7px 10px', 
-                                    borderTop: '1px solid var(--border)', 
-                                    background: 'var(--bg2)',
-                                    cursor: 'pointer',
-                                    transition: 'all 0.2s'
-                                }}
-                                >
-                                {/* 1. Indicador de Posição (1º ou 2º) */}
-                                <div style={{ 
-                                    fontSize: '9px', 
-                                    fontWeight: 800, 
-                                    color: 'var(--muted)', 
-                                    width: '14px',
-                                    opacity: 0.6
-                                }}>
-                                    {pos}º
-                                </div>
-
-                                {/* 2. Bandeira ou Slot Vazio (Dashed) */}
-                                <div style={{ 
-                                    width: '22px', 
-                                    height: '14px', 
-                                    display: 'flex', 
-                                    justifyContent: 'center', 
-                                    alignItems: 'center',
-                                    flexShrink: 0,
-                                    borderRadius: '2px',
-                                    background: teamId ? 'transparent' : 'var(--bg3)',
-                                    border: teamId ? 'none' : '1px dashed var(--border)'
-                                }}>
-                                    {teamData?.flag_url ? (
-                                    <img src={teamData.flag_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '2px' }} />
-                                    ) : (
-                                    <span style={{ fontSize: '8px', opacity: 0.4 }}>?</span>
-                                    )}
-                                </div>
-
-                                {/* 3. Código do Time (BRA, ARG...) ou Placeholder (---) */}
-                                <div style={{ 
-                                    flex: 1, 
-                                    fontSize: '12px', 
-                                    fontWeight: teamId ? 700 : 400, 
-                                    fontFamily: 'DM Mono, monospace',
-                                    color: teamId ? 'var(--text)' : 'var(--muted)',
-                                    letterSpacing: teamId ? '0.05em' : '0',
-                                    opacity: teamId ? 1 : 0.5
-                                }}>
-                                    {getTeamCode(teamId) || 'Selecionar'}
-                                </div>
-
-                                {/* 4. Botão de Status (Check ou Mais) */}
-                                <div style={{ 
-                                    fontSize: '11px', 
-                                    width: '18px', 
-                                    height: '18px', 
-                                    borderRadius: '50%', 
-                                    background: teamId ? 'var(--green-light)' : 'var(--bg3)', 
-                                    display: 'flex', 
-                                    alignItems: 'center', 
-                                    justifyContent: 'center', 
-                                    color: teamId ? 'var(--green)' : 'var(--muted)',
-                                    border: teamId ? '1px solid var(--green-mid)' : '1px solid var(--border)',
-                                    flexShrink: 0,
-                                    transition: 'all 0.2s'
-                                }}>
-                                    {teamId ? '✓' : '+'}
-                                </div>
-                                </div>
-                            );
-                            })}
-                        </div>
-                    );
+                      );
                     })}
-              </div>
-            )}
-          </div>
-
-          <div className="ecard" style={{ background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', overflow: 'hidden' }}>
-            <div className="ecard-h" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '11px 14px 9px' }}>
-              <div className="ecard-t" style={{ fontSize: '11px', fontWeight: 600, color: 'var(--muted)', letterSpacing: '0.08em', textTransform: 'uppercase' }}>Times na Final</div>
-              <div className="epts" style={{ fontFamily: 'DM Mono, monospace', fontSize: '11px', color: 'var(--gold)', background: 'var(--gold-light)', border: '1px solid var(--gold-border)', padding: '2px 8px', borderRadius: '20px' }}>até 10 pts</div>
+                  </div>
+                );
+              })}
             </div>
-            
-            <div className="epick" onClick={() => openModal('Finalista 1', 'finalist_1', 'team')} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '9px 14px', borderTop: '1px solid var(--border)', cursor: 'pointer' }}>
-              <div className="eflag" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '24px' }}>
-                {getTeamName('finalist_1') ? renderTeamFlag(getTeamName('finalist_1')) : '🏆'}
-              </div>
-              <div className="einfo" style={{ flex: 1 }}>
-                <div className="ename" style={{ fontSize: '14px', fontWeight: 500, color: getTeamName('finalist_1') ? 'var(--text)' : 'var(--muted)' }}>
-                  {getTeamName('finalist_1') || 'Selecionar 1º finalista'}
-                </div>
-                <div className="esub" style={{ fontSize: '11px', color: 'var(--muted)', marginTop: '1px' }}>
-                  {getTeamName('finalist_1') ? '1º finalista' : 'Clique para escolher'}
-                </div>
-              </div>
-              <div className="eact" style={{ fontSize: '11px', color: 'var(--green)', fontWeight: 600 }}>
-                {getTeamName('finalist_1') ? 'Trocar' : '+ Escolher'}
-              </div>
-            </div>
-
-            <div className="epick" onClick={() => openModal('Finalista 2', 'finalist_2', 'team')} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '9px 14px', borderTop: '1px solid var(--border)', cursor: 'pointer', opacity: getTeamName('finalist_1') ? 1 : 0.6 }}>
-              <div className="eflag" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '24px', opacity: getTeamName('finalist_2') ? 1 : 0.28 }}>
-                {getTeamName('finalist_2') ? renderTeamFlag(getTeamName('finalist_2')) : '🏆'}
-              </div>
-              <div className="einfo" style={{ flex: 1 }}>
-                <div className="ename" style={{ fontSize: '14px', fontWeight: 500, color: getTeamName('finalist_2') ? 'var(--text)' : 'var(--muted)' }}>
-                  {getTeamName('finalist_2') || 'Selecionar 2º finalista'}
-                </div>
-                <div className="esub" style={{ fontSize: '11px', color: 'var(--muted)', marginTop: '1px' }}>
-                  {getTeamName('finalist_2') ? '2º finalista' : 'Clique para escolher'}
-                </div>
-              </div>
-              <div className="eact" style={{ fontSize: '11px', color: 'var(--green)', fontWeight: 600 }}>
-                {getTeamName('finalist_2') ? 'Trocar' : '+ Escolher'}
-              </div>
-            </div>
-          </div>
-
-          <div className="ecard" style={{ background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', overflow: 'hidden' }}>
-            <div className="ecard-h" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '11px 14px 9px' }}>
-              <div className="ecard-t" style={{ fontSize: '11px', fontWeight: 600, color: 'var(--muted)', letterSpacing: '0.08em', textTransform: 'uppercase' }}>Campeão da Copa</div>
-              <div className="epts" style={{ fontFamily: 'DM Mono, monospace', fontSize: '11px', color: 'var(--gold)', background: 'var(--gold-light)', border: '1px solid var(--gold-border)', padding: '2px 8px', borderRadius: '20px' }}>15 pts</div>
-            </div>
-            <div className="epick" onClick={() => openModal('Campeão da Copa', 'champion', 'team')} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '9px 14px', borderTop: '1px solid var(--border)', cursor: 'pointer' }}>
-              <div className="eflag" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '24px' }}>
-                {getTeamName('champion') ? renderTeamFlag(getTeamName('champion')) : '🥇'}
-              </div>
-              <div className="einfo" style={{ flex: 1 }}>
-                <div className="ename" style={{ fontSize: '14px', fontWeight: 500, color: getTeamName('champion') ? 'var(--text)' : 'var(--muted)' }}>
-                  {getTeamName('champion') || 'Quem leva a taça?'}
-                </div>
-                <div className="esub" style={{ fontSize: '11px', color: 'var(--muted)', marginTop: '1px' }}>
-                  {getTeamName('champion') ? 'Seu palpite' : 'Clique para escolher'}
-                </div>
-              </div>
-              <div className="eact" style={{ fontSize: '11px', color: 'var(--green)', fontWeight: 600 }}>
-                {getTeamName('champion') ? 'Trocar' : '+ Escolher'}
-              </div>
-            </div>
-          </div>
-
-          <div className="ecard" style={{ background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', overflow: 'hidden' }}>
-            <div className="ecard-h" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '11px 14px 9px' }}>
-              <div className="ecard-t" style={{ fontSize: '11px', fontWeight: 600, color: 'var(--muted)', letterSpacing: '0.08em', textTransform: 'uppercase' }}>Artilheiro da Copa</div>
-              <div className="epts" style={{ fontFamily: 'DM Mono, monospace', fontSize: '11px', color: 'var(--gold)', background: 'var(--gold-light)', border: '1px solid var(--gold-border)', padding: '2px 8px', borderRadius: '20px' }}>10 pts</div>
-            </div>
-            <div className="epick" onClick={() => openModal('Artilheiro da Copa', 'top_scorer', 'text')} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '9px 14px', borderTop: '1px solid var(--border)', cursor: 'pointer' }}>
-              <div className="eflag" style={{ fontSize: '21px' }}>⚽</div>
-              <div className="einfo" style={{ flex: 1 }}>
-                <div className="ename" style={{ fontSize: '14px', fontWeight: 500, color: picks['top_scorer']?.pick_text ? 'var(--text)' : 'var(--muted)' }}>
-                  {picks['top_scorer']?.pick_text || 'Nome do jogador'}
-                </div>
-                <div className="esub" style={{ fontSize: '11px', color: 'var(--muted)', marginTop: '1px' }}>
-              {picks['top_scorer']?.pick_text ? 'Seu palpite' : 'Digite o nome do artilheiro'}
-                </div>
-              </div>
-              <div className="eact" style={{ fontSize: '11px', color: 'var(--green)', fontWeight: 600 }}>
-                {picks['top_scorer']?.pick_text ? 'Trocar' : '+ Escolher'}
-              </div>
-            </div>
-          </div>
-
+          )}
         </div>
+
+        {/* ── TIMES NA FINAL ──────────────────────────────── */}
+        <div className="ecard">
+          <div className="ecard-h">
+            <div className="ecard-t">Times na Final</div>
+            <div className="epts">até 10 pts</div>
+          </div>
+
+          {(['finalist_1', 'finalist_2'] as const).map((cat, i) => {
+            const team = getTeamByCategory(cat);
+            const isEmpty = !team;
+            return (
+              <div key={cat} className="epick" onClick={() => openModal(
+                i === 0 ? 'Finalista 1' : 'Finalista 2', cat, 'team'
+              )}
+                style={{ opacity: i === 1 && !getTeamByCategory('finalist_1') ? 0.5 : 1 }}
+              >
+                <div className={`eflag ${isEmpty ? 'empty' : ''}`}>
+                  {team?.flag_url
+                    ? <img src={team.flag_url} alt={team.name} />
+                    : '🏆'}
+                </div>
+                <div className="einfo">
+                  <div className={`ename ${isEmpty ? 'empty' : ''}`}>
+                    {team?.name ?? (i === 0 ? 'Selecionar 1º finalista' : 'Selecionar 2º finalista')}
+                  </div>
+                  <div className="esub">
+                    {team ? (i === 0 ? '1º finalista' : '2º finalista') : 'Clique para escolher'}
+                  </div>
+                </div>
+                <div className="eact">{team ? 'Trocar' : '+ Escolher'}</div>
+              </div>
+            );
+          })}
+        </div>
+
+        {/* ── CAMPEÃO ─────────────────────────────────────── */}
+        <div className="ecard">
+          <div className="ecard-h">
+            <div className="ecard-t">Campeão da Copa</div>
+            <div className="epts">15 pts</div>
+          </div>
+          <div className="epick" onClick={() => openModal('Campeão da Copa', 'champion', 'team')}>
+            {(() => {
+              const team = getTeamByCategory('champion');
+              return (
+                <>
+                  <div className={`eflag ${!team ? 'empty' : ''}`}>
+                    {team?.flag_url ? <img src={team.flag_url} alt={team.name} /> : '🥇'}
+                  </div>
+                  <div className="einfo">
+                    <div className={`ename ${!team ? 'empty' : ''}`}>
+                      {team?.name ?? 'Quem leva a taça?'}
+                    </div>
+                    <div className="esub">{team ? 'Seu palpite' : 'Clique para escolher'}</div>
+                  </div>
+                  <div className="eact">{team ? 'Trocar' : '+ Escolher'}</div>
+                </>
+              );
+            })()}
+          </div>
+        </div>
+
+        {/* ── ARTILHEIRO ──────────────────────────────────── */}
+        <div className="ecard">
+          <div className="ecard-h">
+            <div className="ecard-t">Artilheiro da Copa</div>
+            <div className="epts">10 pts</div>
+          </div>
+          <div className="epick" onClick={() => openModal('Artilheiro da Copa', 'top_scorer', 'text')}>
+            <div className="eflag">⚽</div>
+            <div className="einfo">
+              <div className={`ename ${!picks['top_scorer']?.pick_text ? 'empty' : ''}`}>
+                {picks['top_scorer']?.pick_text ?? 'Nome do jogador'}
+              </div>
+              <div className="esub">
+                {picks['top_scorer']?.pick_text ? 'Seu palpite' : 'Digite o nome do artilheiro'}
+              </div>
+            </div>
+            <div className="eact">
+              {picks['top_scorer']?.pick_text ? 'Trocar' : '+ Escolher'}
+            </div>
+          </div>
+        </div>
+
       </div>
 
-      <ModalEspeciais 
-        isOpen={isModalOpen} 
-        onClose={() => setIsModalOpen(false)} 
+      <ModalEspeciais
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
         title={modalConfig.title}
-        mode={modalConfig.mode} 
+        mode={modalConfig.mode}
         teams={
-          modalConfig.filterGroup 
-            ? teams.filter(t => t.group_letter === modalConfig.filterGroup) 
+          modalConfig.filterGroup
+            ? teams.filter(t => t.group_letter === modalConfig.filterGroup)
             : teams
         }
-        currentSelection={modalConfig.currentSelection} 
+        currentSelection={modalConfig.currentSelection}
         onSave={handleSavePick}
       />
     </div>
