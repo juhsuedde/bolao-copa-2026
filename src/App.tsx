@@ -7,7 +7,6 @@ import Especiais from './pages/Especiais';
 import Ranking from './pages/Ranking';
 import BottomNav from './layout/BottomNav';
 
-// Tipo compartilhado com BottomNav e outras páginas se necessário
 export type Tab = 'home' | 'jogos' | 'especiais' | 'ranking';
 
 function AppContent() {
@@ -24,14 +23,21 @@ function AppContent() {
 
   if (!user) return <Login />;
 
+  const renderTabContent = () => {
+    switch (activeTab) {
+      case 'home': return <Home />;
+      case 'jogos': return <Jogos />;
+      case 'especiais': return <Especiais />;
+      case 'ranking': return <Ranking />;
+      default: return <Home />;
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gray-200 flex justify-center">
       <div className="w-full max-w-md bg-bolao-bg min-h-screen shadow-2xl relative flex flex-col">
-        <main className="flex-1 overflow-y-auto">
-          {activeTab === 'home' && <Home />}
-          {activeTab === 'jogos' && <Jogos />}
-          {activeTab === 'especiais' && <Especiais />}
-          {activeTab === 'ranking' && <Ranking />}
+        <main className="flex-1 pb-24">
+          {renderTabContent()}
         </main>
         <BottomNav currentTab={activeTab} onChangeTab={setActiveTab} />
       </div>

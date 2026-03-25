@@ -48,24 +48,28 @@ export default function BottomNav({ currentTab, onChangeTab }: BottomNavProps) {
   ];
 
   return (
-    <div className="h-[64px] bg-bolao-bg-card border-t border-bolao-border flex items-center justify-around shrink-0 pb-1">
+    <nav className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-md z-50 h-[72px] bg-bolao-bg/90 backdrop-blur-md border-t border-bolao-border flex items-center justify-between pb-safe px-2">
       {tabs.map((tab) => {
         const isActive = currentTab === tab.id;
         return (
           <button
             key={tab.id}
             onClick={() => onChangeTab(tab.id)}
-            className={`flex flex-col items-center gap-[3px] p-[6px_14px] rounded-xl transition-all duration-200 ${
-              isActive ? 'opacity-100 text-bolao-green' : 'opacity-40 text-bolao-text'
+            className={`flex-1 flex flex-col items-center justify-center gap-[4px] py-2 transition-all duration-200 ${
+              isActive 
+                ? 'opacity-100 text-bolao-green scale-105' 
+                : 'opacity-40 text-bolao-text'
             }`}
           >
-            {tab.icon}
-            <span className="text-[10px] font-semibold tracking-[0.02em]">
+            <div className="flex items-center justify-center w-full">
+              {tab.icon}
+            </div>
+            <span className="text-[10px] font-bold tracking-tight">
               {tab.label}
             </span>
           </button>
         );
       })}
-    </div>
+    </nav>
   );
 }
