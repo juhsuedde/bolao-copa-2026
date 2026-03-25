@@ -48,7 +48,7 @@ export default function BottomNav({ currentTab, onChangeTab }: BottomNavProps) {
   ];
 
   return (
-    <nav className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-md z-50 h-[72px] bg-bolao-bg/90 backdrop-blur-md border-t border-bolao-border flex items-center justify-between pb-safe px-2">
+    <nav className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-md z-50 h-[62px] bg-bolao-bg/90 backdrop-blur-md border-t border-bolao-border flex items-center justify-between pb-safe px-2">
       {tabs.map((tab) => {
         const isActive = currentTab === tab.id;
         return (
