@@ -49,11 +49,11 @@ export function groupByDay(matches: Match[]): { label: string; matches: Match[] 
     if (!m.match_date) continue;
     const d = new Date(m.match_date);
     const today = new Date();
-    const isToday =
+    const isTodayDate =
       d.getDate() === today.getDate() &&
       d.getMonth() === today.getMonth() &&
       d.getFullYear() === today.getFullYear();
-    const key = isToday
+    const key = isTodayDate
       ? 'Hoje'
       : d.toLocaleDateString('pt-BR', { weekday: 'short', day: '2-digit', month: '2-digit' });
     if (!map.has(key)) map.set(key, []);
@@ -62,35 +62,74 @@ export function groupByDay(matches: Match[]): { label: string; matches: Match[] 
   return Array.from(map.entries()).map(([label, matches]) => ({ label, matches }));
 }
 
+/**
+ * Calcula pontos para um palpite de jogo.
+ *
+ * FASE DE GRUPOS:
+ *   - Placar exato: 8 pts
+ *   - Vencedor correto / empate correto: 3 pts
+ *
+ * MATA-MATA (isKnockout = true):
+ *   Camada 1 — placar no tempo normal:
+ *     - Placar exato: 10 pts
+ *     - Vencedor/empate correto: 4 pts
+ *   Camada 2 — só pontua se o jogo foi para prorrogação:
+ *     - Acertou quem classificou na prorrogação (ou empate → pênaltis): 5 pts
+ *   Camada 3 — só pontua se o jogo foi para pênaltis:
+ *     - Acertou quem classificou nos pênaltis: 5 pts
+ */
 export function calculatePoints(
   pickHomeScore: number,
   pickAwayScore: number,
   actualHomeScore: number | null,
   actualAwayScore: number | null,
+  // Knockout extras (preenchidos antes do jogo, pontam só se a situação ocorrer)
   pickExtraTimeWinner?: string | null,
   pickPenaltiesWinner?: string | null,
+  // Resultados reais do mata-mata
   actualExtraTimeWinner?: string | null,
-  actualPenaltiesWinner?: string | null
+  actualPenaltiesWinner?: string | null,
+  isKnockout: boolean = false,
 ): number {
   if (actualHomeScore === null || actualAwayScore === null) return 0;
 
-  const isCorrectScore = pickHomeScore === actualHomeScore && pickAwayScore === actualAwayScore;
-  const isCorrectWinner = getWinner(pickHomeScore, pickAwayScore) === getWinner(actualHomeScore, actualAwayScore);
-  
+  const isExact = pickHomeScore === actualHomeScore && pickAwayScore === actualAwayScore;
+  const pickWinner = getWinner(pickHomeScore, pickAwayScore);
+  const actualWinner = getWinner(actualHomeScore, actualAwayScore);
+  const isCorrectWinner = pickWinner === actualWinner;
+
   let points = 0;
 
-  if (isCorrectScore) {
-    points += 10;
-  } else if (isCorrectWinner) {
-    points += 3;
-  }
-
-  if (pickExtraTimeWinner && actualExtraTimeWinner && pickExtraTimeWinner === actualExtraTimeWinner) {
-    points += 2;
-  }
-
-  if (pickPenaltiesWinner && actualPenaltiesWinner && pickPenaltiesWinner === actualPenaltiesWinner) {
-    points += 2;
+  if (isKnockout) {
+    // Camada 1
+    if (isExact) {
+      points += 10;
+    } else if (isCorrectWinner) {
+      points += 4;
+    }
+    // Camada 2 — só pontua se houve prorrogação
+    if (
+      actualExtraTimeWinner !== null &&
+      actualExtraTimeWinner !== undefined &&
+      pickExtraTimeWinner === actualExtraTimeWinner
+    ) {
+      points += 5;
+    }
+    // Camada 3 — só pontua se houve pênaltis
+    if (
+      actualPenaltiesWinner !== null &&
+      actualPenaltiesWinner !== undefined &&
+      pickPenaltiesWinner === actualPenaltiesWinner
+    ) {
+      points += 5;
+    }
+  } else {
+    // Fase de grupos
+    if (isExact) {
+      points += 8;
+    } else if (isCorrectWinner) {
+      points += 3;
+    }
   }
 
   return points;
@@ -100,4 +139,46 @@ function getWinner(homeScore: number, awayScore: number): 'home' | 'away' | 'dra
   if (homeScore > awayScore) return 'home';
   if (awayScore > homeScore) return 'away';
   return 'draw';
+}
+
+/**
+ * Calcula pontos especiais.
+ *
+ * Classificados por grupo (por grupo):
+ *   - 2 acertos: 6 pts
+ *   - 1 acerto: 2 pts
+ *
+ * Times na Final:
+ *   - 2 acertos: 10 pts
+ *   - 1 acerto: 4 pts
+ *
+ * Campeão: 15 pts
+ * Artilheiro: 10 pts
+ */
+export function calculateGroupClassifiedPoints(
+  picked: [string, string],
+  actual: [string, string],
+): number {
+  const hits = picked.filter(p => actual.includes(p)).length;
+  if (hits === 2) return 6;
+  if (hits === 1) return 2;
+  return 0;
+}
+
+export function calculateFinalistsPoints(
+  picked: [string, string],
+  actual: [string, string],
+): number {
+  const hits = picked.filter(p => actual.includes(p)).length;
+  if (hits === 2) return 10;
+  if (hits === 1) return 4;
+  return 0;
+}
+
+export function calculateChampionPoints(pickedTeamId: string, actualChampionId: string): number {
+  return pickedTeamId === actualChampionId ? 15 : 0;
+}
+
+export function calculateTopScorerPoints(pickedName: string, actualName: string): number {
+  return pickedName.trim().toLowerCase() === actualName.trim().toLowerCase() ? 10 : 0;
 }
