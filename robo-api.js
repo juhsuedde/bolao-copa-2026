@@ -51,7 +51,7 @@ async function buscarGols() {
       if (status !== 'notstarted' && status !== 'canceled') {
         const { error } = await supabase
           .from('matches')
-          .update({ home_score: homeScore, away_score: awayScore })
+          .update({ home_score: homeScore, away_score: awayScore , status: status})
           .eq('home_team', 'tur');
           
         if (error) {
@@ -71,8 +71,6 @@ async function buscarGols() {
   }
 }
 
-// Roda a primeira vez assim que ligar
 buscarGols();
 
-// Configurado para checar os gols a cada 2 minutos (120.000 ms)
-setInterval(buscarGols, 120000);
+setInterval(buscarGols, 600000);
