@@ -8,6 +8,7 @@ export type Match = {
   stage: string;
   home_score: number | null;
   away_score: number | null;
+  status?: string | null;
 };
 
 export type Pick = {

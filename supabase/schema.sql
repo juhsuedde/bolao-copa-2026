@@ -379,12 +379,12 @@ CREATE TRIGGER special_pick_changed
 -- HELPER: Check if user has role
 -- ============================================
 
-CREATE OR REPLACE FUNCTION public.has_role(user_uuid UUID, role_name TEXT)
+CREATE OR REPLACE FUNCTION public.has_role(p_user_uuid UUID, p_role_name TEXT)
 RETURNS BOOLEAN AS $$
 BEGIN
   RETURN EXISTS(
     SELECT 1 FROM public.user_roles
-    WHERE user_id = user_uuid AND role = role_name
+    WHERE user_id = p_user_uuid AND role = p_role_name
   );
 END;
 $$ LANGUAGE plpgsql;

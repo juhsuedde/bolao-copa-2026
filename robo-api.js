@@ -11,41 +11,56 @@ async function buscarGols() {
   console.log(`\n⏳ [${new Date().toLocaleTimeString()}] Sincronizando Brasil...`);
   
   try {
-    // Buscamos direto o jogo do Brasil pelo ID da API-Sports (ID: 1145537 - Exemplo, ou busca por time)
-    // Para garantir, vamos listar os jogos "Live" agora:
-    const resposta = await fetch(`https://v3.football.api-sports.io/fixtures?live=all`, {
+    // Primeiro tenta buscar jogos AO VIVO
+    let resposta = await fetch(`https://v3.football.api-sports.io/fixtures?live=all`, {
       headers: { 'x-apisports-key': API_KEY }
     });
 
-    const dados = await resposta.json();
-    const jogosAPI = dados.response || [];
+    let dados = await resposta.json();
+    let jogosAPI = dados.response || [];
 
-    // Busca o Brasil em qualquer lugar da lista de jogos AO VIVO
-    const jogoBrt = jogosAPI.find(j => j.teams.home.name.includes('Brazil') || j.teams.away.name.includes('Brazil'));
+    // Busca o Brasil nos jogos live
+    let jogoBrt = jogosAPI.find(j => j.teams.home.name.includes('Brazil') || j.teams.away.name.includes('Brazil'));
+
+    // Se não achou ao vivo, busca por data de hoje
+    if (!jogoBrt) {
+      console.log('⚠️ Não achou Brasil no live, buscando por data...');
+      const hoje = new Date().toISOString().split('T')[0];
+      resposta = await fetch(`https://v3.football.api-sports.io/fixtures?date=${hoje}&team=bra`, {
+        headers: { 'x-apisports-key': API_KEY }
+      });
+      dados = await resposta.json();
+      jogosAPI = dados.response || [];
+      jogoBrt = jogosAPI.find(j => j.teams.home.name.includes('Brazil') || j.teams.away.name.includes('Brazil'));
+    }
 
     if (jogoBrt) {
       const hScore = jogoBrt.goals.home ?? 0;
       const aScore = jogoBrt.goals.away ?? 0;
       const sAPI = jogoBrt.fixture.status.short;
+      const elapsed = jogoBrt.fixture.status.elapsed ?? 0;
 
-      console.log(`⚽ Brasil ${hScore} x ${aScore} França | Status: ${sAPI}`);
+      console.log(`⚽ Brasil ${hScore} x ${aScore} França | Status API: ${sAPI} (${elapsed}')`);
 
       const { data, error } = await supabase
         .from('matches')
         .update({ 
           home_score: hScore, 
           away_score: aScore,
-          status: 'INPROGRESS' 
+          status: sAPI || 'INPROGRESS',
+          elapsed: elapsed
         })
-        .eq('id', '1cef2353-92cb-4b93-955e-640724b7a07b')
+        .eq('id', 'fd35ae95-76c2-416c-b9c8-911c5452aa06')
         .select();
 
+      console.log('Update result:', { data, error });
       if (data && data.length > 0) {
-        console.log(`✅ SUCESSO! Banco atualizado: ${hScore}x${aScore}`);
+        console.log(`✅ SUCESSO! Banco atualizado: ${hScore}x${aScore} | Status: ${sAPI}`);
+      } else if (error) {
+        console.log('❌ Erro no update:', error.message);
       }
     } else {
-      console.log('⚠️ Jogo do Brasil não encontrado nos jogos AO VIVO da API.');
-      // Plano C: Tenta buscar por data fixa se o Live falhar
+      console.log('⚠️ Jogo do Brasil não encontrado na API.');
       console.log('Dica: Verifique se o jogo já começou na API-Sports.');
     }
 
@@ -55,4 +70,4 @@ async function buscarGols() {
 }
 
 buscarGols();
-setInterval(buscarGols, 240000);
+setInterval(buscarGols, 60000);

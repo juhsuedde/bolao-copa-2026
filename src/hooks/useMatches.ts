@@ -11,7 +11,7 @@ async function fetchMatches() {
   const { data, error } = await supabase
     .from('matches')
     .select(`
-      id, match_date, stage, home_score, away_score, home_team, away_team,
+      id, match_date, stage, home_score, away_score, home_team, away_team, status,
       home:teams!matches_home_team_fkey(name, group_name, flag_url),
       away:teams!matches_away_team_fkey(name, group_name, flag_url)
     `)
@@ -68,8 +68,9 @@ export function useMatches() {
   const { data: matches = [], isLoading: loadingMatches } = useQuery({
     queryKey: MATCHES_QUERY_KEY,
     queryFn: fetchMatches,
-    staleTime: 5 * 60 * 1000,
-    refetchOnWindowFocus: false,
+    staleTime: 30 * 1000,
+    refetchOnWindowFocus: true,
+    refetchInterval: 30000,
   });
 
   const { data: userPicks = {} as Record<string, Pick>, isLoading: loadingPicks } = useQuery({
@@ -150,17 +151,22 @@ export function useMatches() {
     );
   }, []);
 
-  const isLive = useCallback((dateStr: string) => {
-    if (!dateStr) return false;
-    const start = new Date(dateStr).getTime();
-    const now = Date.now();
-    return now >= start && now <= start + 110 * 60 * 1000;
-  }, [timerTick]);
+  const isLive = useCallback((match: Match) => {
+    const apiStatus = (match.status || '').toLowerCase();
+    return (
+      apiStatus === 'inprogress' ||
+      apiStatus === '1h' ||
+      apiStatus === '2h' ||
+      apiStatus === 'ht' ||
+      apiStatus === 'halftime'
+    );
+  }, []);
 
-  const liveMinute = useCallback((dateStr: string) => {
-    if (!dateStr) return 0;
-    return Math.min(90, Math.floor((Date.now() - new Date(dateStr).getTime()) / 60000));
-  }, [timerTick]);
+  const liveMinute = useCallback((match: Match) => {
+    if (!match.match_date || !isLive(match)) return 0;
+    const start = new Date(match.match_date).getTime();
+    return Math.min(90, Math.floor((Date.now() - start) / 60000));
+  }, [isLive]);
 
   const formatTime = useCallback((dateStr: string) => {
     if (!dateStr) return '';

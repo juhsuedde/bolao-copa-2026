@@ -21,7 +21,7 @@ export function useUserRole() {
       setLoading(true);
       try {
         const { data, error } = await supabase
-          .rpc('has_role', { user_id: user.id, role: 'admin' });
+          .rpc('has_role', { p_user_uuid: user.id, p_role_name: 'admin' });
         
         if (error) {
           console.error('Error checking role:', error);
