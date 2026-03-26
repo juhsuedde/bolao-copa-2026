@@ -27,9 +27,7 @@ export default function MatchCard({
     ? !['notstarted', 'finished', 'canceled'].includes(apiStatus)
     : clockIsLive;
 
-  const finished = apiStatus
-    ? apiStatus === 'finished'
-    : (match.home_score !== null && match.away_score !== null && !isLive);
+  const finished = apiStatus === 'finished' || apiStatus === 'ft' || (match.home_score !== null && apiStatus === 'finished');
 
   const isKnockout = match.stage !== 'group_stage';
   const stageLabel = isKnockout

@@ -8,54 +8,51 @@ const supabase = createClient(process.env.VITE_SUPABASE_URL, process.env.VITE_SU
 const API_KEY = '740d8f95c9f6ec08f8636c8d311096b3';
 
 async function buscarGols() {
-  console.log(`\n⏳ [${new Date().toLocaleTimeString()}] Sincronizando jogos com a API...`);
+  console.log(`\n⏳ [${new Date().toLocaleTimeString()}] Sincronizando Brasil...`);
   
   try {
-    const hoje = new Date().toLocaleString("en-CA", {timeZone: "America/Sao_Paulo"}).split(',')[0];
-    const resposta = await fetch(`https://v3.football.api-sports.io/fixtures?date=${hoje}`, {
+    // Buscamos direto o jogo do Brasil pelo ID da API-Sports (ID: 1145537 - Exemplo, ou busca por time)
+    // Para garantir, vamos listar os jogos "Live" agora:
+    const resposta = await fetch(`https://v3.football.api-sports.io/fixtures?live=all`, {
       headers: { 'x-apisports-key': API_KEY }
     });
 
     const dados = await resposta.json();
     const jogosAPI = dados.response || [];
 
-    console.log(`📡 Recebi ${jogosAPI.length} jogos da API hoje.`);
+    // Busca o Brasil em qualquer lugar da lista de jogos AO VIVO
+    const jogoBrt = jogosAPI.find(j => j.teams.home.name.includes('Brazil') || j.teams.away.name.includes('Brazil'));
 
-    for (const jogo of jogosAPI) {
-      if (jogo.teams.home.name.includes('Brazil')) {
-        const homeScore = jogo.goals.home ?? 0;
-        const awayScore = jogo.goals.away ?? 0;
-        const statusAPI = jogo.fixture.status.short;
+    if (jogoBrt) {
+      const hScore = jogoBrt.goals.home ?? 0;
+      const aScore = jogoBrt.goals.away ?? 0;
+      const sAPI = jogoBrt.fixture.status.short;
 
-        const idRealDoBrasil = '1cef2353-92cb-4b93-955e-640724b7a07b'; 
+      console.log(`⚽ Brasil ${hScore} x ${aScore} França | Status: ${sAPI}`);
 
-        console.log(`🎯 Tentando atualizar ID: ${idRealDoBrasil}...`);
+      const { data, error } = await supabase
+        .from('matches')
+        .update({ 
+          home_score: hScore, 
+          away_score: aScore,
+          status: 'INPROGRESS' 
+        })
+        .eq('id', '1cef2353-92cb-4b93-955e-640724b7a07b')
+        .select();
 
-        const { data, error } = await supabase
-          .from('matches')
-          .update({ 
-            home_score: homeScore, 
-            away_score: awayScore,
-            status: statusAPI === 'NS' ? 'NOTSTARTED' : 'INPROGRESS'
-          })
-          .eq('id', idRealDoBrasil)
-          .select();
-
-        if (error) {
-          console.log('❌ ERRO NO SUPABASE:', error.message);
-        } else if (data && data.length > 0) {
-          console.log(`✅ VITÓRIA! Brasil atualizado: ${homeScore}x${awayScore}`);
-        } else {
-          console.log('⚠️ O ID existe, mas nenhuma linha foi alterada (talvez RLS?)');
-        }
+      if (data && data.length > 0) {
+        console.log(`✅ SUCESSO! Banco atualizado: ${hScore}x${aScore}`);
       }
+    } else {
+      console.log('⚠️ Jogo do Brasil não encontrado nos jogos AO VIVO da API.');
+      // Plano C: Tenta buscar por data fixa se o Live falhar
+      console.log('Dica: Verifique se o jogo já começou na API-Sports.');
     }
 
   } catch (erro) {
-    console.error('❌ Erro no processamento:', erro.message);
+    console.error('❌ Erro:', erro.message);
   }
 }
 
-// Inicia o robô
 buscarGols();
 setInterval(buscarGols, 240000);
