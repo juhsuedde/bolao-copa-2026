@@ -10,17 +10,22 @@ interface MatchCardProps {
     home_score: number | null;
     away_score: number | null;
     match_date: string;
-    status?: string | null; // O '?' e o 'null' resolvem o erro do MatchDayGroup
+    status?: string | null;
   };
+  // Adicionamos estas linhas para o TypeScript parar de reclamar do que vem do pai
+  pick?: any;
+  isLocked?: boolean;
+  isLive?: boolean;
+  liveMinute?: number;
+  formatTime?: (date: string) => string;
+  onClick?: () => void;
 }
 
 const MatchCard: React.FC<MatchCardProps> = ({ match }) => {
   const matchDate = new Date(match.match_date);
-  
-  // Convertemos para minúsculo e garantimos que nunca seja undefined
   const apiStatus = (match.status || '').toLowerCase();
   
-  const isLive = 
+  const liveStatus = 
     apiStatus === 'inprogress' || 
     apiStatus === '1h' || 
     apiStatus === '2h' || 
@@ -33,14 +38,13 @@ const MatchCard: React.FC<MatchCardProps> = ({ match }) => {
     apiStatus === 'aet' || 
     apiStatus === 'pen';
 
-  // Se estiver ao vivo ou finalizado, mostramos o placar. Caso contrário, mostramos VS.
-  const showScore = isLive || isFinished;
+  const showScore = liveStatus || isFinished;
 
   return (
-    <div className={`p-4 rounded-xl border-2 transition-all ${isLive ? 'border-green-500 bg-green-50/50 shadow-sm' : 'border-gray-100 bg-white'}`}>
+    <div className={`p-4 rounded-xl border-2 transition-all ${liveStatus ? 'border-green-500 bg-green-50/50 shadow-sm' : 'border-gray-100 bg-white'}`}>
       <div className="flex justify-between items-center mb-4">
         <div className="flex items-center gap-2">
-          {isLive ? (
+          {liveStatus ? (
             <span className="flex items-center text-[10px] font-black uppercase tracking-wider text-green-600 bg-green-100 px-2 py-0.5 rounded-full">
               <span className="w-1.5 h-1.5 bg-green-600 rounded-full mr-1.5 animate-pulse" />
               Ao Vivo
@@ -55,7 +59,7 @@ const MatchCard: React.FC<MatchCardProps> = ({ match }) => {
             </span>
           )}
         </div>
-        {!isFinished && !isLive && (
+        {!isFinished && !liveStatus && (
           <span className="text-xs font-medium text-gray-400">
             {format(matchDate, 'HH:mm')}
           </span>
