@@ -42,11 +42,11 @@ export default function ModalEspeciais({ isOpen, onClose, title, mode, teams, cu
   return (
     <>
       <div 
-        className="fixed inset-0 bg-bolao-text/60 backdrop-blur-sm z-40 transition-opacity" 
+        className="fixed inset-0 bg-bolao-text/60 backdrop-blur-sm z-[100] transition-opacity" 
         onClick={onClose} 
       />
       
-      <div className="fixed inset-x-0 bottom-0 z-50 transform transition-transform">
+      <div className="fixed inset-x-0 bottom-0 z-[100] transform transition-transform">
         <div className="bg-bolao-bg rounded-t-3xl pt-2 px-5 pb-8 shadow-2xl relative max-h-[90vh] flex flex-col">
           
           {/* Tracinho superior */}

@@ -63,11 +63,12 @@ export default function BottomNav({ currentTab, onChangeTab, showAdmin }: Bottom
 
   return (
     <nav 
-      className="fixed bottom-0 left-0 right-0 w-full z-50 flex justify-around items-center px-2 pb-[env(safe-area-inset-bottom)]"
+      className="fixed bottom-0 left-0 right-0 mx-auto w-full max-w-md z-50 flex justify-around items-center px-2 pb-[env(safe-area-inset-bottom)]"
       style={{ 
         height: '64px',
-        background: 'var(--bg)', // Puxa o fundo do seu novo design
-        borderTop: '1px solid var(--border)' // Borda suave para separar do conteúdo
+        background: 'var(--bg)', 
+        borderTop: '1px solid var(--border)',
+        boxShadow: '0 -4px 6px -1px rgba(0, 0, 0, 0.02)'
       }}
     >
       {tabs.map(tab => (

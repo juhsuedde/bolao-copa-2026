@@ -83,10 +83,10 @@ export default function ModalResultadoJogo({ isOpen, onClose, match }: Props) {
   return (
     <>
       {/* Overlay */}
-      <div className="fixed inset-0 z-50 modal-overlay animate-fade-in" onClick={onClose} />
+      <div className="fixed inset-0 z-[100] modal-overlay animate-fade-in" onClick={onClose} />
 
       {/* Modal */}
-      <div className="fixed inset-x-4 bottom-4 z-50 modal-content p-5 animate-slide-up"
+      <div className="fixed inset-x-4 bottom-4 z-[100] modal-content p-5 animate-slide-up"
         style={{ maxHeight: '85vh', overflowY: 'auto' }}>
 
         {/* Header */}
