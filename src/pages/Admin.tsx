@@ -19,7 +19,7 @@ interface MatchInput {
 }
 
 export default function Admin() {
-  const { isAdmin, loading: roleLoading } = useUserRole();
+  const { isAdmin } = useUserRole();
   const { showToast } = useToast();
   const [matches, setMatches] = useState<MatchData[]>([]);
   const [loading, setLoading] = useState(true);
