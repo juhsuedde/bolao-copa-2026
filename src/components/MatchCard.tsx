@@ -15,12 +15,22 @@ export default function MatchCard({
   match,
   pick,
   isLocked,
-  isLive,
+  isLive: clockIsLive,
   liveMinute,
   formatTime,
   onClick,
 }: MatchCardProps) {
-  const finished = match.home_score !== null && match.away_score !== null;
+  
+  const apiStatus = (match as any).status?.toLowerCase();
+
+  const isLive = apiStatus
+    ? !['notstarted', 'finished', 'canceled'].includes(apiStatus)
+    : clockIsLive;
+
+  const finished = apiStatus
+    ? apiStatus === 'finished'
+    : (match.home_score !== null && match.away_score !== null && !isLive);
+
   const isKnockout = match.stage !== 'group_stage';
   const stageLabel = isKnockout
     ? (STAGE_LABELS[match.stage] ?? match.stage.replace(/_/g, ' '))
@@ -65,7 +75,7 @@ export default function MatchCard({
         {isLive ? (
           <span className="flex items-center gap-1 text-[10px] font-bold text-bolao-red tracking-[0.07em]">
             <span className="inline-block w-[5px] h-[5px] rounded-full bg-bolao-red animate-pulse" />
-            AO VIVO {liveMinute}'
+            AO VIVO {liveMinute ? `${liveMinute}'` : ''}
           </span>
         ) : (
           <span className="text-[10px] text-bolao-muted font-mono">{formatTime(match.match_date)}</span>
@@ -83,11 +93,11 @@ export default function MatchCard({
         </div>
 
         <div className="w-[52px] text-center flex-shrink-0 bg-bolao-bg rounded p-1 border border-bolao-border">
-          {finished ? (
+          {apiStatus !== 'notstarted' ? (
             <span className="font-mono text-[15px] font-bold text-bolao-text">
-              {match.home_score}
+              {match.home_score ?? 0}
               <span className="text-bolao-muted text-[10px] mx-0.5">x</span>
-              {match.away_score}
+              {match.away_score ?? 0}
             </span>
           ) : (
             <span className="text-[10px] font-semibold text-bolao-muted block py-1">VS</span>
