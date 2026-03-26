@@ -221,7 +221,7 @@ export default function ModalResultadoJogo({ isOpen, onClose, match }: Props) {
         {/* Legend */}
         <div className="flex items-center justify-center gap-4 mt-4 pt-3"
           style={{ borderTop: '1px solid var(--border)' }}>
-          <span style={{ fontSize: '10px', color: 'var(--gold)' }}>● Exato (+{maxExact} pts)</span>
+          <span style={{ fontSize: '10px', color: 'var(--gold)' }}>● Placar (+{maxExact} pts)</span>
           <span style={{ fontSize: '10px', color: 'var(--green)' }}>● Vencedor (+{winnerPts} pts)</span>
           <span style={{ fontSize: '10px', color: 'var(--red)' }}>● Erro (0 pts)</span>
         </div>

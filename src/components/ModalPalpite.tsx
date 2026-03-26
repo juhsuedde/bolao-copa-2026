@@ -97,7 +97,7 @@ export default function ModalPalpite({ isOpen, onClose, match, currentPick, onSa
 
         {/* Badge da fase */}
         <p style={{ textAlign: 'center', fontSize: '11px', color: 'var(--muted)', marginBottom: '16px' }}>
-          {isKnockout ? '⚡ Mata-mata' : '🏟️ Fase de grupos'}
+          {isKnockout ? '⚡ Mata-mata' : 'Fase de grupos'}
         </p>
 
         {/* Times */}
@@ -140,7 +140,7 @@ export default function ModalPalpite({ isOpen, onClose, match, currentPick, onSa
               border: '1px solid var(--green-mid)',
               padding: '2px 8px', borderRadius: '12px',
             }}>
-              {info.exact} pts exato · {'winner' in info ? info.winner : ''} pts vencedor
+              {info.exact} pts placar · {'winner' in info ? info.winner : ''} pts vencedor
             </span>
           </div>
 

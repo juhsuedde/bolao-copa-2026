@@ -3,6 +3,7 @@ import { supabase } from '../lib/supabase';
 import { useAuth } from '../hooks/useAuth';
 import ModalPalpite from '../components/ModalPalpite';
 import ModalResultadoJogo from '../components/ModalResultadoJogo';
+import { useToast } from '../hooks/useToast';
 
 export type Match = {
   id: string;
@@ -57,6 +58,7 @@ function groupByDay(matches: Match[]): { label: string; matches: Match[] }[] {
 
 export default function Jogos() {
   const { user } = useAuth();
+  const { showToast } = useToast();
   const [matches, setMatches] = useState<Match[]>([]);
   const [userPicks, setUserPicks] = useState<Record<string, Pick>>({});
   const [loading, setLoading] = useState(true);
@@ -187,8 +189,12 @@ export default function Jogos() {
         penalties_winner: penaltiesWinner,
       }, { onConflict: 'user_id,match_id' });
 
-    if (error) alert(error.message);
-    else fetchData();
+    if (error) {
+        showToast('Erro ao salvar palpite: ' + error.message, 'error');
+      } else {
+        showToast('Palpite salvo com sucesso!', 'success');
+        fetchData();
+      }
   };
 
   const availableGroups = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L'];
@@ -259,7 +265,7 @@ export default function Jogos() {
         border: `1px solid ${pick.points > 0 ? 'var(--green-mid)' : '#F0B0AA'}`,
         fontSize: '10px',
       }}>
-        +{pick.points} pts {pick.points >= 8 && '· exato!'}
+        +{pick.points} pts {pick.points >= 8 && '· placar exato!'}
       </span>
     );
   };
