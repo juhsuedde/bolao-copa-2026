@@ -5,7 +5,7 @@ import fetch from 'node-fetch';
 dotenv.config({ path: '.env.local' });
 
 const supabase = createClient(process.env.VITE_SUPABASE_URL, process.env.VITE_SUPABASE_ANON_KEY);
-const API_KEY = '740d8f95c9f6ec08f8636c8d311096b3';
+const API_KEY = process.env.API_FOOTBALL_KEY || '740d8f95c9f6ec08f8636c8d311096b3';
 
 async function buscarGols() {
   console.log(`\n⏳ [${new Date().toLocaleTimeString()}] Sincronizando Brasil...`);

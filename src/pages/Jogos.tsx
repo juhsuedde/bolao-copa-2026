@@ -4,20 +4,8 @@ import { useAuth } from '../hooks/useAuth';
 import ModalPalpite from '../components/ModalPalpite';
 import ModalResultadoJogo from '../components/ModalResultadoJogo';
 import { useToast } from '../hooks/useToast';
-
-export type Match = {
-  id: string;
-  home_team: string;
-  away_team: string;
-  home: { name: string; group_name: string; flag_url: string };
-  away: { name: string; group_name: string; flag_url: string };
-  match_date: string;
-  stage: string;
-  home_score: number | null;
-  away_score: number | null;
-  status?: string | null;
-  elapsed?: number | null;
-};
+import type { Match } from '../types';
+import { isLive as isLiveUtil, isFinished as isFinishedUtil } from '../utils/matchUtils';
 
 type Pick = {
   match_id: string;
@@ -38,21 +26,6 @@ const STAGE_LABELS: Record<string, string> = {
   third_place: '3º Lugar',
   final: 'Final',
 };
-
-// Status gravados pelo robô que indicam jogo ao vivo
-function checkIsLive(status: string | null | undefined): boolean {
-  const s = (status || '').toUpperCase();
-  return s === 'INPROGRESS' || s === '1H' || s === '2H' || s === 'HT' || s === 'HALFTIME';
-}
-
-// Status que indicam jogo encerrado
-function checkIsFinished(status: string | null | undefined, homeScore: number | null, awayScore: number | null): boolean {
-  const s = (status || '').toUpperCase();
-  const finishedByStatus = s === 'FINISHED' || s === 'FT' || s === 'AET' || s === 'PEN';
-  // Fallback: se tem placar e não está ao vivo, considera encerrado
-  const finishedByScore = homeScore !== null && awayScore !== null && !checkIsLive(status);
-  return finishedByStatus || finishedByScore;
-}
 
 function groupByDay(matches: Match[]): { label: string; matches: Match[] }[] {
   const map = new Map<string, Match[]>();
@@ -152,7 +125,7 @@ export default function Jogos() {
 
   // ─── Polling: rebusca a cada 30s quando há jogos ao vivo (fallback) ────────
   useEffect(() => {
-    const hasLiveMatch = matches.some(m => checkIsLive(m.status));
+    const hasLiveMatch = matches.some(m => isLiveUtil(m));
     if (!hasLiveMatch) return;
 
     const interval = setInterval(fetchMatches, 30000);
@@ -184,7 +157,7 @@ export default function Jogos() {
 
   const isMatchLocked = (match: Match) => {
     if (!match.match_date) return false;
-    if (checkIsLive(match.status)) return false; // jogo ao vivo = travado mas não mostra cadeado
+    if (isLiveUtil(match)) return false; // jogo ao vivo = travado mas não mostra cadeado
     const matchTime = new Date(match.match_date.replace(' ', 'T')).getTime();
     return Date.now() >= matchTime - 10 * 60 * 1000;
   };
@@ -199,7 +172,7 @@ export default function Jogos() {
   };
 
   const liveMinute = (match: Match) => {
-    if (!checkIsLive(match.status)) return 0;
+    if (!isLiveUtil(match)) return 0;
     if (match.elapsed) return match.elapsed;
     if (!match.match_date) return 0;
     const start = new Date(match.match_date.replace(' ', 'T')).getTime();
@@ -212,8 +185,8 @@ export default function Jogos() {
   };
 
   const openModal = (match: Match) => {
-    const live = checkIsLive(match.status);
-    const finished = checkIsFinished(match.status, match.home_score, match.away_score);
+    const live = isLiveUtil(match);
+    const finished = isFinishedUtil(match);
     if (live) return; // jogos ao vivo não podem ser clicados
     if (finished && !live) {
       setSelectedMatch(match);
@@ -307,8 +280,8 @@ export default function Jogos() {
   const MatchCard = ({ match }: { match: Match }) => {
     const pick = userPicks[match.id];
     const locked = isMatchLocked(match);
-    const live = checkIsLive(match.status);
-    const finished = checkIsFinished(match.status, match.home_score, match.away_score);
+    const live = isLiveUtil(match);
+    const finished = isFinishedUtil(match);
     const isKnockout = match.stage !== 'group_stage';
     const stageLabel = isKnockout
       ? (STAGE_LABELS[match.stage] ?? match.stage.replace(/_/g, ' '))

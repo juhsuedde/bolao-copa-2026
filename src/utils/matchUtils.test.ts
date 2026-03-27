@@ -70,44 +70,58 @@ describe('isFirstMatchDay', () => {
 });
 
 describe('isLive', () => {
-  it('returns false for empty date', () => {
-    expect(isLive('')).toBe(false);
+  it('returns false for null status', () => {
+    expect(isLive({} as any)).toBe(false);
   });
 
-  it('returns true during match time', () => {
-    const matchStart = '2026-06-15T18:00:00Z';
-    const currentTime = new Date(matchStart).getTime() + 45 * 60 * 1000;
-    expect(isLive(matchStart, currentTime)).toBe(true);
+  it('returns true for INPROGRESS status', () => {
+    const match = { status: 'INPROGRESS' } as any;
+    expect(isLive(match)).toBe(true);
   });
 
-  it('returns false before match starts', () => {
-    const matchStart = '2026-06-15T18:00:00Z';
-    const currentTime = new Date(matchStart).getTime() - 30 * 60 * 1000;
-    expect(isLive(matchStart, currentTime)).toBe(false);
+  it('returns true for 1H status', () => {
+    const match = { status: '1H' } as any;
+    expect(isLive(match)).toBe(true);
   });
 
-  it('returns false after match ends (110min)', () => {
-    const matchStart = '2026-06-15T18:00:00Z';
-    const currentTime = new Date(matchStart).getTime() + 120 * 60 * 1000;
-    expect(isLive(matchStart, currentTime)).toBe(false);
+  it('returns true for 2H status', () => {
+    const match = { status: '2H' } as any;
+    expect(isLive(match)).toBe(true);
+  });
+
+  it('returns true for HT status', () => {
+    const match = { status: 'HT' } as any;
+    expect(isLive(match)).toBe(true);
+  });
+
+  it('returns false for FINISHED status', () => {
+    const match = { status: 'FINISHED' } as any;
+    expect(isLive(match)).toBe(false);
   });
 });
 
 describe('liveMinute', () => {
-  it('returns 0 for empty date', () => {
-    expect(liveMinute('')).toBe(0);
+  it('returns 0 when not live', () => {
+    expect(liveMinute({ status: 'FINISHED' } as any)).toBe(0);
   });
 
-  it('returns correct minute during match', () => {
+  it('returns elapsed from match when available', () => {
+    const match = { status: '2H', elapsed: 67 } as any;
+    expect(liveMinute(match)).toBe(67);
+  });
+
+  it('calculates from match_date when no elapsed', () => {
     const matchStart = '2026-06-15T18:00:00Z';
-    const currentTime = new Date(matchStart).getTime() + 30 * 60 * 1000;
-    expect(liveMinute(matchStart, currentTime)).toBe(30);
+    const match = { status: 'INPROGRESS', match_date: matchStart } as any;
+    const now = new Date(matchStart).getTime() + 30 * 60 * 1000;
+    expect(liveMinute(match, now)).toBe(30);
   });
 
   it('caps at 90 minutes', () => {
     const matchStart = '2026-06-15T18:00:00Z';
-    const currentTime = new Date(matchStart).getTime() + 120 * 60 * 1000;
-    expect(liveMinute(matchStart, currentTime)).toBe(90);
+    const match = { status: 'INPROGRESS', match_date: matchStart } as any;
+    const now = new Date(matchStart).getTime() + 120 * 60 * 1000;
+    expect(liveMinute(match, now)).toBe(90);
   });
 });
 

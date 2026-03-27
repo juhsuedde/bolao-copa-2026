@@ -27,15 +27,24 @@ export function isFirstMatchDay(dateStr: string, firstMatchDate: string = '2026-
   );
 }
 
-export function isLive(dateStr: string, currentTime: number = Date.now()): boolean {
-  if (!dateStr) return false;
-  const start = new Date(dateStr).getTime();
-  return currentTime >= start && currentTime <= start + 110 * 60 * 1000;
+export function isLive(match: Match): boolean {
+  const status = (match.status || '').toUpperCase();
+  return status === 'INPROGRESS' || status === '1H' || status === '2H' || status === 'HT' || status === 'HALFTIME';
 }
 
-export function liveMinute(dateStr: string, currentTime: number = Date.now()): number {
-  if (!dateStr) return 0;
-  return Math.min(90, Math.floor((currentTime - new Date(dateStr).getTime()) / 60000));
+export function isFinished(match: Match): boolean {
+  const status = (match.status || '').toUpperCase();
+  const finishedByStatus = status === 'FINISHED' || status === 'FT' || status === 'AET' || status === 'PEN';
+  const finishedByScore = match.home_score !== null && match.away_score !== null && !isLive(match);
+  return finishedByStatus || finishedByScore;
+}
+
+export function liveMinute(match: Match, currentTime: number = Date.now()): number {
+  if (!isLive(match)) return 0;
+  if (match.elapsed) return match.elapsed;
+  if (!match.match_date) return 0;
+  const start = new Date(match.match_date).getTime();
+  return Math.min(90, Math.floor((currentTime - start) / 60000));
 }
 
 export function formatTime(dateStr: string): string {

@@ -9,6 +9,7 @@ export type Match = {
   home_score: number | null;
   away_score: number | null;
   status?: string | null;
+  elapsed?: number | null;
 };
 
 export type Pick = {

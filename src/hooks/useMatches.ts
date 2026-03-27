@@ -3,6 +3,14 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '../lib/supabase';
 import { useAuth } from './useAuth';
 import type { Match, Pick, Filter, GroupFilter } from '../types';
+import {
+  isMatchLocked as isMatchLockedUtil,
+  isToday as isTodayUtil,
+  isFirstMatchDay as isFirstMatchDayUtil,
+  isLive as isLiveUtil,
+  liveMinute as liveMinuteUtil,
+  formatTime as formatTimeUtil,
+} from '../utils/matchUtils';
 
 const MATCHES_QUERY_KEY = ['matches'];
 const PICKS_QUERY_KEY = ['userPicks'];
@@ -125,52 +133,27 @@ export function useMatches() {
   const timerTick = useTimer();
 
   const isMatchLocked = useCallback((matchDate: string) => {
-    if (!matchDate) return false;
-    return Date.now() >= new Date(matchDate).getTime() - 10 * 60 * 1000;
+    return isMatchLockedUtil(matchDate, Date.now());
   }, [timerTick]);
 
   const isToday = useCallback((dateStr: string) => {
-    if (!dateStr) return false;
-    const d = new Date(dateStr);
-    const today = new Date();
-    return (
-      d.getDate() === today.getDate() &&
-      d.getMonth() === today.getMonth() &&
-      d.getFullYear() === today.getFullYear()
-    );
+    return isTodayUtil(dateStr);
   }, []);
 
   const isFirstMatchDay = useCallback((dateStr: string) => {
-    if (!dateStr) return false;
-    const d = new Date(dateStr);
-    const first = new Date('2026-06-11T16:00:00Z');
-    return (
-      d.getDate() === first.getDate() &&
-      d.getMonth() === first.getMonth() &&
-      d.getFullYear() === first.getFullYear()
-    );
+    return isFirstMatchDayUtil(dateStr);
   }, []);
 
   const isLive = useCallback((match: Match) => {
-    const apiStatus = (match.status || '').toLowerCase();
-    return (
-      apiStatus === 'inprogress' ||
-      apiStatus === '1h' ||
-      apiStatus === '2h' ||
-      apiStatus === 'ht' ||
-      apiStatus === 'halftime'
-    );
+    return isLiveUtil(match);
   }, []);
 
   const liveMinute = useCallback((match: Match) => {
-    if (!match.match_date || !isLive(match)) return 0;
-    const start = new Date(match.match_date).getTime();
-    return Math.min(90, Math.floor((Date.now() - start) / 60000));
-  }, [isLive]);
+    return liveMinuteUtil(match, Date.now());
+  }, []);
 
   const formatTime = useCallback((dateStr: string) => {
-    if (!dateStr) return '';
-    return new Date(dateStr).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+    return formatTimeUtil(dateStr);
   }, []);
 
   const savePick = useCallback((
