@@ -22,15 +22,16 @@ async function buscarGols() {
     // Busca o Brasil nos jogos live
     let jogoBrt = jogosAPI.find(j => j.teams.home.name.includes('Brazil') || j.teams.away.name.includes('Brazil'));
 
-    // Se não achou ao vivo, busca por data de hoje
+    // Se não achou ao vivo, busca TODOS os jogos de HOJE (não só do Brasil)
     if (!jogoBrt) {
-      console.log('⚠️ Não achou Brasil no live, buscando por data...');
+      console.log('⚠️ Não achou Brasil no live, buscando todos os jogos de hoje...');
       const hoje = new Date().toISOString().split('T')[0];
-      resposta = await fetch(`https://v3.football.api-sports.io/fixtures?date=${hoje}&team=bra`, {
+      resposta = await fetch(`https://v3.football.api-sports.io/fixtures?date=${hoje}`, {
         headers: { 'x-apisports-key': API_KEY }
       });
       dados = await resposta.json();
       jogosAPI = dados.response || [];
+      console.log(`📋 Total de jogos hoje: ${jogosAPI.length}`);
       jogoBrt = jogosAPI.find(j => j.teams.home.name.includes('Brazil') || j.teams.away.name.includes('Brazil'));
     }
 
@@ -53,11 +54,8 @@ async function buscarGols() {
         .eq('id', 'fd35ae95-76c2-416c-b9c8-911c5452aa06')
         .select();
 
-      console.log('Update result:', { data, error });
       if (data && data.length > 0) {
         console.log(`✅ SUCESSO! Banco atualizado: ${hScore}x${aScore} | Status: ${sAPI}`);
-      } else if (error) {
-        console.log('❌ Erro no update:', error.message);
       }
     } else {
       console.log('⚠️ Jogo do Brasil não encontrado na API.');
