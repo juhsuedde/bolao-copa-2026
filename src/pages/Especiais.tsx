@@ -171,7 +171,11 @@ export default function Especiais() {
   if (loading) return (
     <div className="flex-1 flex items-center justify-center animate-fade-in">
       <div className="text-center">
-        <div className="text-3xl mb-2 animate-pulse-glow inline-block">⭐</div>
+        <div className="mb-2 animate-pulse inline-block">
+          <span className="text-3xl block font-sans text-black bg-transparent border-none outline-none shadow-none" style={{ textShadow: 'none' }}>
+            ⭐
+          </span>
+        </div>
         <p style={{ color: 'var(--muted)', fontSize: '13px' }}>Carregando...</p>
       </div>
     </div>

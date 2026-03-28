@@ -64,7 +64,10 @@ function AppContent() {
   if (loading) {
     return (
       <div className="h-screen flex items-center justify-center bg-bolao-bg font-display text-bolao-green text-2xl tracking-widest">
-        ⚽ CARREGANDO...
+        <span className="font-sans text-black border-none outline-none shadow-none bg-transparent mr-3 animate-bounce">
+          ⚽
+        </span>
+        <span>CARREGANDO...</span>
       </div>
     );
   }
