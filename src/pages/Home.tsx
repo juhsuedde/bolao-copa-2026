@@ -33,9 +33,10 @@ export default function Home() {
         .select(`
           user_id,
           total_points,
-          user:users(name, avatar_url)
+          user:profiles(name, avatar_url)
         `)
-        .order('total_points', { ascending: false });
+        .order('total_points', { ascending: false })
+        .limit(100);
 
       if (data && !error) {
         setRanking(data as unknown as RankUser[]);

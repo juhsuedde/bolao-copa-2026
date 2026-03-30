@@ -9,11 +9,9 @@ export function isToday(dateStr: string): boolean {
   if (!dateStr) return false;
   const d = new Date(dateStr);
   const today = new Date();
-  return (
-    d.getDate() === today.getDate() &&
-    d.getMonth() === today.getMonth() &&
-    d.getFullYear() === today.getFullYear()
-  );
+  const dUTC = Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate());
+  const todayUTC = Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate());
+  return dUTC === todayUTC;
 }
 
 export function isFirstMatchDay(dateStr: string, firstMatchDate: string = '2026-06-11T16:00:00Z'): boolean {
@@ -35,7 +33,7 @@ export function isLive(match: Match): boolean {
 export function isFinished(match: Match): boolean {
   const status = (match.status || '').toUpperCase();
   const finishedByStatus = status === 'FINISHED' || status === 'FT' || status === 'AET' || status === 'PEN';
-  const finishedByScore = match.home_score !== null && match.away_score !== null && !isLive(match);
+  const finishedByScore = match.home_score !== null && match.away_score !== null && finishedByStatus;
   return finishedByStatus || finishedByScore;
 }
 
@@ -58,10 +56,9 @@ export function groupByDay(matches: Match[]): { label: string; matches: Match[] 
     if (!m.match_date) continue;
     const d = new Date(m.match_date);
     const today = new Date();
-    const isTodayDate =
-      d.getDate() === today.getDate() &&
-      d.getMonth() === today.getMonth() &&
-      d.getFullYear() === today.getFullYear();
+    const dUTC = Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate());
+    const todayUTC = Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate());
+    const isTodayDate = dUTC === todayUTC;
     const key = isTodayDate
       ? 'Hoje'
       : d.toLocaleDateString('pt-BR', { weekday: 'short', day: '2-digit', month: '2-digit' });

@@ -57,8 +57,10 @@ export default function Admin() {
   }
 
   useEffect(() => {
-    fetchMatches();
-  }, []);
+    if (isAdmin) {
+      fetchMatches();
+    }
+  }, [isAdmin]);
 
   async function updateMatch(id: string) {
     const input = inputs[id];

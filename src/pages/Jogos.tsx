@@ -123,15 +123,6 @@ export default function Jogos() {
     return () => { supabase.removeChannel(channel); };
   }, []);
 
-  // ─── Polling: rebusca a cada 30s quando há jogos ao vivo (fallback) ────────
-  useEffect(() => {
-    const hasLiveMatch = matches.some(m => isLiveUtil(m));
-    if (!hasLiveMatch) return;
-
-    const interval = setInterval(fetchMatches, 30000);
-    return () => clearInterval(interval);
-  }, [matches, fetchMatches]);
-
   // ─── Scroll automático para hoje ao entrar em "Todos" ─────────────────────
   const matchesByDay = filter === 'todos' ? groupByDay(matches) : [];
   useEffect(() => {
@@ -166,9 +157,9 @@ export default function Jogos() {
     if (!dateStr) return false;
     const d = new Date(dateStr.replace(' ', 'T'));
     const today = new Date();
-    return d.getDate() === today.getDate() &&
-      d.getMonth() === today.getMonth() &&
-      d.getFullYear() === today.getFullYear();
+    const dUTC = Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate());
+    const todayUTC = Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate());
+    return dUTC === todayUTC;
   };
 
   const liveMinute = (match: Match) => {

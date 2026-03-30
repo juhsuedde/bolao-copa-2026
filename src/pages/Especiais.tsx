@@ -4,7 +4,7 @@ import { useAuth } from '../hooks/useAuth';
 import ModalEspeciais from '../components/ModalEspeciais';
 
 type Team = { id: string; name: string; group_letter: string; flag_url: string };
-type SpecialPick = { pick_category: string; team_id: string | null; pick_text: string | null };
+type SpecialPick = { pick_type: string; team_id: string | null; pick_text: string | null };
 
 const ALL_GROUPS = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L'];
 
@@ -89,13 +89,13 @@ export default function Especiais() {
 
       const { data: picksData, error: picksError } = await supabase
         .from('special_picks')
-        .select('pick_category, team_id, pick_text')
+        .select('pick_type, team_id, pick_text')
         .eq('user_id', user.id);
 
       if (picksError) console.error('Erro ao buscar palpites:', picksError);
       if (picksData) {
         const map: Record<string, SpecialPick> = {};
-        picksData.forEach(p => { map[p.pick_category] = p; });
+        picksData.forEach(p => { map[p.pick_type] = p; });
         setPicks(map);
       }
 
@@ -134,10 +134,10 @@ export default function Especiais() {
     if (!user) return;
     const { error } = await supabase.from('special_picks').upsert({
       user_id: user.id,
-      pick_category: modalConfig.category,
+      pick_type: modalConfig.category,
       team_id: modalConfig.mode === 'team' ? value : null,
       pick_text: modalConfig.mode === 'text' ? value : null,
-    }, { onConflict: 'user_id,pick_category' });
+    }, { onConflict: 'user_id,pick_type' });
     if (error) { alert(error.message); return; }
     fetchData();
   };

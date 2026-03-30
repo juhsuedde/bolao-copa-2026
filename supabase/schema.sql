@@ -218,7 +218,6 @@ DECLARE
   v_match RECORD;
   v_points INTEGER;
 BEGIN
-  -- Get pick and match data
   SELECT mp.*, m.home_score AS match_home_score, m.away_score AS match_away_score,
          m.extra_time_winner AS match_extra_time, m.penalties_winner AS match_penalties
   INTO v_pick
@@ -230,7 +229,6 @@ BEGIN
     RETURN;
   END IF;
 
-  -- Calculate points
   v_points := public.calculate_match_pick_points(
     v_pick.home_score,
     v_pick.away_score,
@@ -242,10 +240,18 @@ BEGIN
     v_pick.match_penalties
   );
 
-  -- Update pick
   UPDATE public.match_picks
   SET points = v_points, updated_at = NOW()
   WHERE id = pick_id;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Wrapper function for trigger
+CREATE OR REPLACE FUNCTION public.trigger_pick_inserted()
+RETURNS TRIGGER AS $$
+BEGIN
+  PERFORM public.update_pick_points(NEW.id);
+  RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;
 
@@ -259,8 +265,7 @@ RETURNS TRIGGER AS $$
 BEGIN
   IF NEW.home_score IS NOT NULL AND NEW.away_score IS NOT NULL 
      AND (OLD.home_score IS NULL OR OLD.home_score <> NEW.home_score
-          OR OLD.away_score IS NULL OR OLD.away_score <> NEW.away) THEN
-    -- Update all picks for this match
+          OR OLD.away_score IS NULL OR OLD.away_score <> NEW.away_score) THEN
     UPDATE public.match_picks
     SET points = public.calculate_match_pick_points(
       home_score,
@@ -285,41 +290,75 @@ CREATE TRIGGER match_result_updated
   FOR EACH ROW
   EXECUTE FUNCTION public.trigger_update_match_picks();
 
--- Trigger: After pick is inserted/updated, recalculate its points
-CREATE OR REPLACE FUNCTION public.trigger_calculate_pick_points()
-RETURNS TRIGGER AS $$
-BEGIN
-  IF NEW.home_score IS NOT NULL AND NEW.away_score IS NOT NULL THEN
-    SELECT m.home_score, m.away_score, m.extra_time_winner, m.penalties_winner
-    INTO NEW.extra_time_winner, NEW.away_score, NEW.extra_time_winner, NEW.penalties_winner
-    FROM public.matches m WHERE m.id = NEW.match_id;
-    
-    IF NEW.home_score IS NOT NULL THEN
-      NEW.points := public.calculate_match_pick_points(
-        NEW.home_score,
-        NEW.away_score,
-        NEW.home_score,
-        NEW.away_score,
-        NEW.extra_time_winner,
-        NEW.penalties_winner,
-        NEW.extra_time_winner,
-        NEW.penalties_winner
-      );
-    END IF;
-  END IF;
-  RETURN NEW;
-END;
-$$ LANGUAGE plpgsql;
-
 DROP TRIGGER IF EXISTS pick_inserted ON public.match_picks;
 CREATE TRIGGER pick_inserted
   AFTER INSERT ON public.match_picks
   FOR EACH ROW
-  EXECUTE FUNCTION public.update_pick_points(NEW.id);
+  EXECUTE FUNCTION public.trigger_pick_inserted();
 
 -- ============================================
 -- LEADERBOARD FUNCTIONS
 -- ============================================
+
+-- Calculate group points for a user based on group picks
+CREATE OR REPLACE FUNCTION public.calculate_group_points(user_uuid UUID)
+RETURNS INTEGER AS $$
+DECLARE
+  v_group_points INTEGER := 0;
+  v_group_name TEXT;
+  v_picked_1 TEXT;
+  v_picked_2 TEXT;
+  v_actual_1 INTEGER;
+  v_actual_2 INTEGER;
+  v_hits INTEGER;
+BEGIN
+  FOR v_group_name IN SELECT DISTINCT substring(pick_type FROM 7 FOR 1) 
+                      FROM public.special_picks 
+                      WHERE user_id = user_uuid AND pick_type LIKE 'group_%' LOOP
+    SELECT team_id::TEXT INTO v_picked_1 
+    FROM public.special_picks 
+    WHERE user_id = user_uuid AND pick_type = 'group_' || v_group_name || '_1';
+    
+    SELECT team_id::TEXT INTO v_picked_2 
+    FROM public.special_picks 
+    WHERE user_id = user_uuid AND pick_type = 'group_' || v_group_name || '_2';
+    
+    SELECT MAX(CASE WHEN pos = 1 THEN team_id END),
+           MAX(CASE WHEN pos = 2 THEN team_id END)
+    INTO v_actual_1, v_actual_2
+    FROM (
+      SELECT t.id as team_id,
+             ROW_NUMBER() OVER (ORDER BY 
+               SUM(CASE WHEN m.home_team = t.id THEN m.home_score ELSE m.away_score END) -
+               SUM(CASE WHEN m.home_team = t.id THEN m.away_score ELSE m.home_score END) DESC,
+               SUM(CASE WHEN m.home_team = t.id THEN m.home_score ELSE m.away_score END) DESC
+             ) as pos
+      FROM public.matches m
+      JOIN public.teams t ON t.id = m.home_team OR t.id = m.away_team
+      WHERE m.stage = 'group_stage' AND t.group_name = v_group_name
+      GROUP BY t.id
+    ) ranked;
+    
+    IF v_actual_1 IS NOT NULL AND v_actual_2 IS NOT NULL THEN
+      v_hits := 0;
+      IF v_picked_1 = v_actual_1::TEXT OR v_picked_1 = v_actual_2::TEXT THEN
+        v_hits := v_hits + 1;
+      END IF;
+      IF v_picked_2 = v_actual_1::TEXT OR v_picked_2 = v_actual_2::TEXT THEN
+        v_hits := v_hits + 1;
+      END IF;
+      
+      IF v_hits = 2 THEN
+        v_group_points := v_group_points + 6;
+      ELSIF v_hits = 1 THEN
+        v_group_points := v_group_points + 2;
+      END IF;
+    END IF;
+  END LOOP;
+  
+  RETURN v_group_points;
+END;
+$$ LANGUAGE plpgsql;
 
 -- Recalculate leaderboard for a user
 CREATE OR REPLACE FUNCTION public.recalculate_user_points(user_uuid UUID)
@@ -327,29 +366,30 @@ RETURNS VOID AS $$
 DECLARE
   v_match_points INTEGER := 0;
   v_special_points INTEGER := 0;
+  v_group_points INTEGER := 0;
   v_total_points INTEGER := 0;
 BEGIN
-  -- Sum match points
   SELECT COALESCE(SUM(points), 0)
   INTO v_match_points
   FROM public.match_picks
   WHERE user_id = user_uuid;
 
-  -- Sum special points
   SELECT COALESCE(SUM(points), 0)
   INTO v_special_points
   FROM public.special_picks
   WHERE user_id = user_uuid;
 
-  v_total_points := v_match_points + v_special_points;
+  v_group_points := public.calculate_group_points(user_uuid);
 
-  -- Upsert leaderboard
-  INSERT INTO public.leaderboard (user_id, total_points, match_points, special_points, updated_at)
-  VALUES (user_uuid, v_total_points, v_match_points, v_special_points, NOW())
+  v_total_points := v_match_points + v_special_points + v_group_points;
+
+  INSERT INTO public.leaderboard (user_id, total_points, match_points, special_points, group_points, updated_at)
+  VALUES (user_uuid, v_total_points, v_match_points, v_special_points, v_group_points, NOW())
   ON CONFLICT (user_id) DO UPDATE SET
     total_points = v_total_points,
     match_points = v_match_points,
     special_points = v_special_points,
+    group_points = v_group_points,
     updated_at = NOW();
 END;
 $$ LANGUAGE plpgsql;

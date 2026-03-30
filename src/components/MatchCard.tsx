@@ -72,6 +72,7 @@ const MatchCard: React.FC<MatchCardProps> = ({ match }) => {
             src={`https://raw.githubusercontent.com/lucas-m-p/world-cup-flags/main/flags/${match.home_team.toLowerCase()}.png`}
             alt={match.home_team}
             className="w-10 h-7 object-cover rounded shadow-sm mb-2"
+            onError={(e) => { e.currentTarget.style.display = 'none'; }}
           />
           <span className="text-xs font-bold uppercase tracking-tight text-gray-700">{match.home_team}</span>
         </div>
@@ -95,6 +96,7 @@ const MatchCard: React.FC<MatchCardProps> = ({ match }) => {
             src={`https://raw.githubusercontent.com/lucas-m-p/world-cup-flags/main/flags/${match.away_team.toLowerCase()}.png`}
             alt={match.away_team}
             className="w-10 h-7 object-cover rounded shadow-sm mb-2"
+            onError={(e) => { e.currentTarget.style.display = 'none'; }}
           />
           <span className="text-xs font-bold uppercase tracking-tight text-gray-700">{match.away_team}</span>
         </div>

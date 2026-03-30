@@ -50,7 +50,7 @@ export default function ModalResultadoJogo({ isOpen, onClose, match }: Props) {
   if (!isOpen || !match) return null;
 
   const isKnockout = match.stage !== 'group_stage';
-  const maxExact = isKnockout ? 10 : 8;
+  const maxExact = isKnockout ? 20 : 8;
   const winnerPts = isKnockout ? 4 : 3;
 
   const getPtsBadge = (points: number) => {

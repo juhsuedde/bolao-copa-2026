@@ -33,9 +33,10 @@ export default function Ranking() {
           group_points,
           match_points,
           special_points,
-          user:user_id(name, avatar_url)
+          user:profiles(name, avatar_url)
         `)
-        .order('total_points', { ascending: false });
+        .order('total_points', { ascending: false })
+        .limit(100);
 
       if (data) setLeaderboard(data as unknown as LeaderboardEntry[]);
       if (error) showToast('Erro ao carregar ranking', 'error');
