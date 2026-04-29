@@ -235,7 +235,11 @@ const { data: picksData, error: picksError } = await supabase
                             <span className="gppos">{pos}º</span>
                             <div className={`gpflag ${!team ? 'empty' : ''}`}>
                               {team?.flag_url ? (
-                                <img src={team.flag_url} alt={team.name} />
+                                team.flag_url.startsWith('http') ? (
+                                  <img src={team.flag_url} alt={team.name} />
+                                ) : (
+                                  <span className="text-xl">{team.flag_url}</span>
+                                )
                               ) : (
                                 <span>?</span>
                               )}
@@ -278,7 +282,11 @@ const { data: picksData, error: picksError } = await supabase
                 >
                   <div className={`eflag ${isEmpty ? 'empty' : ''}`}>
                     {team?.flag_url
-                      ? <img src={team.flag_url} alt={team.name} />
+                      ? (team.flag_url.startsWith('http') ? (
+                          <img src={team.flag_url} alt={team.name} />
+                        ) : (
+                          <span className="text-2xl">{team.flag_url}</span>
+                        ))
                       : '🏆'}
                   </div>
                   <div className="einfo">
@@ -309,7 +317,13 @@ const { data: picksData, error: picksError } = await supabase
                 return (
                   <>
                     <div className={`eflag ${!team ? 'empty' : ''}`}>
-                      {team?.flag_url ? <img src={team.flag_url} alt={team.name} /> : '🥇'}
+                      {team?.flag_url ? (
+                        team.flag_url.startsWith('http') ? (
+                          <img src={team.flag_url} alt={team.name} />
+                        ) : (
+                          <span className="text-2xl">{team.flag_url}</span>
+                        )
+                      ) : '🥇'}
                     </div>
                     <div className="einfo">
                       <div className={`ename ${!team ? 'empty' : ''}`}>

@@ -1,3 +1,5 @@
+import { useState } from 'react';
+
 type Team = { id: string; name: string; group_letter: string; flag_url?: string };
 
 type ModalEspeciaisProps = {
@@ -27,16 +29,24 @@ const TOP_SCORERS = [
   'Romelu Lukaku (Bélgica)',
   'Lautaro Martínez (Argentina)',
   'Lamine Yamal (Espanha)',
-  'Outro Jogador'
+  'Outro (digitar nome)'
 ];
 
 export default function ModalEspeciais({ isOpen, onClose, title, mode, teams, currentSelection, onSave }: ModalEspeciaisProps) {
-  
+  const [customPlayer, setCustomPlayer] = useState('');
+
   if (!isOpen) return null;
 
   const handleSelect = (value: string) => {
     onSave(value);
     onClose();
+    setCustomPlayer('');
+  };
+
+  const handleCustomSave = () => {
+    if (customPlayer.trim()) {
+      handleSelect(customPlayer.trim());
+    }
   };
 
   return (
@@ -85,12 +95,16 @@ export default function ModalEspeciais({ isOpen, onClose, title, mode, teams, cu
                           : 'bg-bolao-bg-card border-bolao-border hover:bg-gray-50'
                       }`}
                     >
-                      {/* Bandeira */}
-                      <div className="w-8 h-6 flex items-center justify-center flex-shrink-0">
+                      {/* Bandeira (emoji ou fallback) */}
+                      <div className="w-8 h-6 flex items-center justify-center flex-shrink-0 text-2xl">
                         {team.flag_url ? (
-                          <img src={team.flag_url} alt={team.name} className="w-full h-full object-cover rounded shadow-sm border border-bolao-border" />
+                          team.flag_url.startsWith('http') ? (
+                            <img src={team.flag_url} alt={team.name} className="w-full h-full object-cover rounded shadow-sm border border-bolao-border" />
+                          ) : (
+                            <span>{team.flag_url}</span>
+                          )
                         ) : (
-                          <span className="text-xl opacity-30">?</span>
+                          <span className="opacity-30">?</span>
                         )}
                       </div>
                       
@@ -119,7 +133,13 @@ export default function ModalEspeciais({ isOpen, onClose, title, mode, teams, cu
                 {TOP_SCORERS.map(scorer => (
                   <button
                     key={scorer}
-                    onClick={() => handleSelect(scorer)}
+                    onClick={() => {
+                      if (scorer === 'Outro (digitar nome)') {
+                        // Não fecha o modal, deixa digitar
+                        return;
+                      }
+                      handleSelect(scorer);
+                    }}
                     className={`flex items-center p-3 rounded-xl border transition-colors ${
                       currentSelection === scorer 
                         ? 'bg-bolao-green-light border-bolao-green-mid' 
@@ -140,6 +160,25 @@ export default function ModalEspeciais({ isOpen, onClose, title, mode, teams, cu
                     )}
                   </button>
                 ))}
+
+                {/* Campo de texto para jogador customizado */}
+                <div className="mt-4 p-4 rounded-xl bg-bolao-bg-card border border-bolao-border">
+                  <input
+                    type="text"
+                    placeholder="Digite o nome do jogador"
+                    value={customPlayer}
+                    onChange={(e) => setCustomPlayer(e.target.value)}
+                    className="w-full p-3 rounded-lg border border-bolao-border bg-bolao-bg text-bolao-text text-sm focus:outline-none focus:border-bolao-green"
+                    onKeyDown={(e) => e.key === 'Enter' && handleCustomSave()}
+                  />
+                  <button
+                    onClick={handleCustomSave}
+                    disabled={!customPlayer.trim()}
+                    className="w-full mt-3 py-3 rounded-lg bg-bolao-green text-white font-medium text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    Confirmar
+                  </button>
+                </div>
               </div>
             )}
             
