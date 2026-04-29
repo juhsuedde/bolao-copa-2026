@@ -218,6 +218,18 @@ export default function Jogos() {
     if (error) {
       showToast('Erro ao salvar palpite: ' + error.message, 'error');
     } else {
+      // Atualiza o estado local imediatamente para mostrar o palpite
+      setUserPicks(prev => ({
+        ...prev,
+        [matchId]: {
+          match_id: matchId,
+          home_score: homeScore,
+          away_score: awayScore,
+          points: 0,
+          extra_time_winner: extraTimeWinner,
+          penalties_winner: penaltiesWinner
+        }
+      }));
       showToast('Palpite salvo!', 'success');
       fetchPicks();
     }
