@@ -106,6 +106,10 @@ export default function Jogos() {
 
   // ─── Realtime: atualiza instantaneamente quando o robô grava no banco ──────
   useEffect(() => {
+    if (import.meta.env.VITE_USE_MOCK === 'true') {
+      return;
+    }
+
     const channel = supabase
       .channel('matches-live')
       .on(

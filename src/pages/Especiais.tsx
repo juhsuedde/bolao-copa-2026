@@ -4,7 +4,7 @@ import { useAuth } from '../hooks/useAuth';
 import ModalEspeciais from '../components/ModalEspeciais';
 
 type Team = { id: string; name: string; group_letter: string; flag_url: string };
-type SpecialPick = { pick_type: string; team_id: string | null; pick_text: string | null };
+type SpecialPick = { pick_type: string; team_id: string | null; player_name: string | null };
 
 const ALL_GROUPS = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L'];
 
@@ -87,10 +87,10 @@ export default function Especiais() {
         })));
       }
 
-      const { data: picksData, error: picksError } = await supabase
-        .from('special_picks')
-        .select('pick_type, team_id, pick_text')
-        .eq('user_id', user.id);
+const { data: picksData, error: picksError } = await supabase
+  .from('special_picks')
+  .select('pick_type, team_id, player_name')
+  .eq('user_id', user.id);
 
       if (picksError) console.error('Erro ao buscar palpites:', picksError);
       if (picksData) {
@@ -125,7 +125,7 @@ export default function Especiais() {
     filterGroup: string | null = null
   ) => {
     const current = picks[category];
-    const currentSelection = mode === 'team' ? current?.team_id || '' : current?.pick_text || '';
+     const currentSelection = mode === 'team' ? current?.team_id || '' : current?.player_name || '';
     setModalConfig({ title, category, mode, currentSelection, filterGroup });
     setIsModalOpen(true);
   };
@@ -136,7 +136,7 @@ export default function Especiais() {
       user_id: user.id,
       pick_type: modalConfig.category,
       team_id: modalConfig.mode === 'team' ? value : null,
-      pick_text: modalConfig.mode === 'text' ? value : null,
+       player_name: modalConfig.mode === 'text' ? value : null,
     }, { onConflict: 'user_id,pick_type' });
     if (error) { alert(error.message); return; }
     fetchData();
@@ -337,16 +337,16 @@ export default function Especiais() {
             <div className="epick" onClick={() => openModal('Artilheiro da Copa', 'top_scorer', 'text')}>
               <div className="eflag">⚽</div>
               <div className="einfo">
-                <div className={`ename ${!picks['top_scorer']?.pick_text ? 'empty' : ''}`}>
-                  {picks['top_scorer']?.pick_text ?? 'Nome do jogador'}
-                </div>
-                <div className="esub">
-                  {picks['top_scorer']?.pick_text ? 'Seu palpite' : 'Digite o nome do artilheiro'}
-                </div>
+                 <div className={`ename ${!picks['top_scorer']?.player_name ? 'empty' : ''}`}>
+                   {picks['top_scorer']?.player_name ?? 'Nome do jogador'}
+                 </div>
+                 <div className="esub">
+                   {picks['top_scorer']?.player_name ? 'Seu palpite' : 'Digite o nome do artilheiro'}
+                 </div>
               </div>
-              <span className="eact">
-                {picks['top_scorer']?.pick_text ? 'Trocar' : '+ Escolher'}
-              </span>
+               <span className="eact">
+                 {picks['top_scorer']?.player_name ? 'Trocar' : '+ Escolher'}
+               </span>
             </div>
           </div>
         </div>

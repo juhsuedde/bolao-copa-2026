@@ -16,6 +16,14 @@ export function useUserRole() {
       return;
     }
 
+    const isMockMode = import.meta.env.VITE_USE_MOCK === 'true';
+    
+    if (isMockMode) {
+      setRole('admin');
+      setLoading(false);
+      return;
+    }
+
     async function checkRole() {
       if (!user) return;
       setLoading(true);

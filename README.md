@@ -1,92 +1,110 @@
 # ⚽ Bolão Copa 2026
 
-Aplicação web (PWA) para bolão entre amigos durante a Copa do Mundo de 2026.
+Aplicação web (PWA) para bolão entre amigos durante a Copa do Mundo de 2026 — versão demo interativa para portfolio.
 
-## 🚀 Objetivo
+> 🔗 **Live Demo**: [bolao-copa-2026-ten.vercel.app](https://bolao-copa-2026-ten.vercel.app)
 
-Permitir que usuários:
+---
 
-- Façam palpites em jogos da fase de grupos e mata-mata (com suporte a prorrogação e pênaltis)
-- Realizem palpites especiais (campeão, finalistas e artilheiro)
-- Acompanhem o ranking em tempo real
-- Participem de um sistema de pontuação automatizado
+## 🚀 Sobre o Projeto
+
+O Bolão Copa 2026 é uma aplicação completa de palpites esportivos desenvolvida para demonstrar habilidades full-stack com stack moderna. A versão atual é uma **demo estática interativa** — todos os dados são mockados localmente, permitindo que visitantes explorem 100% da interface, fluxos de palpites, ranking e painel admin sem necessidade de autenticação ou backend ativo.
+
+A arquitetura original foi construída com Supabase (PostgreSQL + Auth + Realtime), e a migração para modo demo preserva toda a estrutura de tipos, hooks e componentes, demonstrando capacidade de abstração e manutenibilidade de código.
+
+---
 
 ## 🛠️ Tecnologias Utilizadas
 
-- **Frontend**: React + TypeScript + Vite + Tailwind CSS
-- **Backend / BaaS**: Supabase (PostgreSQL + Auth + Realtime)
-- **Autenticação**: Google OAuth
-- **Plataforma**: PWA (Progressive Web App) otimizada para visualização mobile (iOS/Safari e Android)
-- **Cache/Dados**: React Query + Service Worker
+| Camada                      | Tecnologia                                              |
+| --------------------------- | ------------------------------------------------------- |
+| **Frontend**                | React 18 + TypeScript                                   |
+| **Build Tool**              | Vite                                                    |
+| **Estilização**             | Tailwind CSS                                            |
+| **Gerenciamento de Estado** | React Query (TanStack Query)                            |
+| **Backend Original**        | Supabase (PostgreSQL + Auth + Realtime)                 |
+| **Arquitetura Demo**        | Mock layer com flag de ambiente (`VITE_USE_MOCK`)       |
+| **Plataforma**              | PWA (Progressive Web App) — instalável em iOS e Android |
+| **Cache**                   | Service Worker + estratégia stale-while-revalidate      |
 
-## 📌 Status Atual do Projeto
+---
 
-- [x] Definição de regras e sistema de pontuação
-- [x] Protótipo UI mobile-first criado e validado
-- [x] Modelagem do banco de dados relacional concluída (tabelas de usuários, times, partidas e palpites)
-- [x] Configuração do Supabase e trigger automático de usuários
-- [x] Setup inicial do frontend com Vite e roteamento
-- [x] Conexão das páginas principais (Início, Jogos, Especiais, Ranking) com o banco
-- [x] Lógica de triggers/functions para cálculo automático de pontuação
+## ✨ Funcionalidades
 
-## 🏗️ Estrutura do Projeto
+- ✅ **Autenticação simulada** — usuário demo logado automaticamente, sem redirecionamentos OAuth
+- ✅ **Palpites em jogos da fase de grupos** — interface completa com datas, horários e grupos
+- ✅ **Palpites no mata-mata** — suporte a prorrogação e pênaltis
+- ✅ **Palpites especiais** — campeão, vice-campeão e artilheiro
+- ✅ **Ranking em tempo real** — tabela de classificação com pontuação automática
+- ✅ **Painel Admin** — gestão de jogos e resultados (visualização demo)
+- ✅ **PWA instalável** — funciona offline, otimizado para mobile
+- ✅ **Design mobile-first** — experiência nativa em iOS/Safari e Android
 
-```
-src/
-├── components/       # Componentes React (MatchCard, ModalPalpite, etc.)
-├── hooks/           # Hooks personalizados (useMatches, useAuth, useToast)
-├── pages/           # Páginas principais (Home, Jogos, Especiais, Ranking, Admin)
-├── types/           # Definições de tipos TypeScript
-├── utils/           # Funções utilitárias (matchUtils)
-└── lib/             # Configurações (Supabase)
-```
+---
 
 ## 🎯 Sistema de Pontuação
 
-- **Placar exato**: 10 pontos
-- **Vencedor correto**: 3 pontos
-- **Prorrogação**: 2 pontos (mata-mata)
-- **Pênaltis**: 2 pontos (mata-mata)
+| Acerto                  | Pontos |
+| ----------------------- | ------ |
+| Placar exato            | 10 pts |
+| Vencedor correto        | 3 pts  |
+| Prorrogação (mata-mata) | 2 pts  |
+| Pênaltis (mata-mata)    | 2 pts  |
 
-## 🔧 Configuração
+---
 
-### 1. Variáveis de Ambiente
-
-Crie `.env.local` com:
-
-```env
-VITE_SUPABASE_URL=sua_url_supabase
-VITE_SUPABASE_ANON_KEY=sua_chave_anon
-```
-
-### 2. Banco de Dados
-
-Execute o schema em `supabase/schema.sql` no SQL Editor do Supabase.
-
-### 3. Execute o projeto
+## 🚀 Como Executar
 
 ```bash
+# Clone o repositório
+git clone https://github.com/juhsuedde/bolao-copa-2026.git
+cd bolao-copa-2026
+
+# Instale as dependências
 npm install
+
+# Execute em modo demo (dados mockados, sem Supabase)
 npm run dev
 ```
 
-### 4. Execute testes
+> O modo demo está ativo por padrão via `VITE_USE_MOCK=true`.
 
-```bash
-npm test
+---
+
+## 🔧 Variáveis de Ambiente
+
+```env
+# Modo demo (padrão)
+VITE_USE_MOCK=true
+
+# Para reativar o backend Supabase (modo produção):
+# VITE_USE_MOCK=false
+# VITE_SUPABASE_URL=sua_url_supabase
+# VITE_SUPABASE_ANON_KEY=sua_chave_anon
 ```
 
-## 📱 PWA
+---
 
-A aplicação é instalável como PWA:
-- Funciona offline (cache via Service Worker)
-- Instalável no iOS e Android
-- Theme color: verde #16a34a
+## 📸 Screenshots
 
-## 🔐 Funcionalidades
+_(Adicione aqui screenshots das principais telas: Home, Jogos, Ranking, Palpites)_
 
-- Autenticação Google OAuth
-- Palpites em tempo real (travados 10min antes do jogo)
-- Palpites especiais (campeão, vice, artilheiro)
-- Ranking em tempo real
-- Painel admin para gestão
+---
+
+## 📝 Notas Técnicas
+
+- **TypeScript strict**: 100% dos componentes e hooks tipados
+- **React Query**: cache, loading states e error handling padronizados
+- **Tailwind CSS**: design system consistente, sem CSS modules
+- **Mobile-first**: breakpoints otimizados para smartphones
+- **Acessibilidade**: contrastes validados, navegação por teclado
+
+---
+
+## 📄 Licença
+
+MIT — sinta-se livre para usar como referência ou inspirar seus próprios projetos.
+
+---
+
+> 💡 **Quer ver a versão com backend real?** A arquitetura com Supabase (Auth OAuth, PostgreSQL com triggers de pontuação automática e Realtime) está preservada no histórico de commits e pode ser reativada alterando `VITE_USE_MOCK`.

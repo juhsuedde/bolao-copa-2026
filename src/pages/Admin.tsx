@@ -81,6 +81,33 @@ export default function Admin() {
     setSaving(null);
   }
 
+  if (import.meta.env.VITE_USE_MOCK === 'true') {
+    return (
+      <div className="p-6 pb-20 min-h-screen" style={{ background: 'var(--bg)' }}>
+        <div className="screen-header">
+          <h1 className="screen-title">Admin</h1>
+          <span className="hchip gold">Modo Demo</span>
+        </div>
+        <div className="p-6 text-center">
+          <div className="mb-4 text-6xl">🏟️</div>
+          <h2 className="text-xl font-bold mb-3" style={{ color: 'var(--text)' }}>Painel Admin Indisponível</h2>
+          <p style={{ color: 'var(--muted)', fontSize: '14px' }}>
+            O painel de administração requer o backend do Supabase.<br />
+            Esta é uma versão demo estática.
+          </p>
+          <div className="mt-6 p-4 rounded-xl" style={{ background: 'var(--green-light)', border: '1px solid var(--green-mid)' }}>
+            <p style={{ color: 'var(--green)', fontSize: '13px', fontWeight: 600 }}>
+              ✨ Você tem acesso admin no modo demo!
+            </p>
+            <p style={{ color: 'var(--muted)', fontSize: '12px', marginTop: '4px' }}>
+              Configure VITE_USE_MOCK=false e conecte ao Supabase para usar o painel completo.
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   if (!isAdmin) {
     return (
       <div className="p-6 pb-20 bg-bolao-bg min-h-screen flex items-center justify-center">

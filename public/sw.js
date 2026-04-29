@@ -13,9 +13,12 @@ self.addEventListener('install', (event) => {
 });
 
 self.addEventListener('fetch', (event) => {
-  // API requests sempre buscam do network
+  // API requests always go to network (no Supabase calls needed in demo mode)
   if (event.request.url.includes('supabase.co')) {
-    event.respondWith(fetch(event.request));
+    event.respondWith(new Response(JSON.stringify({ mock: true }), {
+      status: 200,
+      headers: { 'Content-Type': 'application/json' }
+    }));
     return;
   }
   
