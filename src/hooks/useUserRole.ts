@@ -19,7 +19,8 @@ export function useUserRole() {
     const isMockMode = import.meta.env.VITE_USE_MOCK === 'true';
     
     if (isMockMode) {
-      setRole('admin');
+      // No modo demo, ninguém vê o painel admin
+      setRole(null);
       setLoading(false);
       return;
     }
