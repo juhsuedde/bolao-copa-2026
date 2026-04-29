@@ -90,11 +90,8 @@ ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
 
 -- Match picks: users can see their own picks, admins can see all
 CREATE POLICY "Users can view own picks"
-  ON public.match_picks FOR SELECT
-  USING (auth.uid() = user_id OR EXISTS (
-    SELECT 1 FROM public.user_roles
-    WHERE user_id = auth.uid() AND role = 'admin'
-  ));
+   ON public.match_picks FOR SELECT
+   USING (auth.uid() = user_id OR public.has_role(auth.uid(), 'admin'));
 
 CREATE POLICY "Users can insert own picks"
   ON public.match_picks FOR INSERT
@@ -106,11 +103,8 @@ CREATE POLICY "Users can update own picks"
 
 -- Special picks: same policies
 CREATE POLICY "Users can view own special picks"
-  ON public.special_picks FOR SELECT
-  USING (auth.uid() = user_id OR EXISTS (
-    SELECT 1 FROM public.user_roles
-    WHERE user_id = auth.uid() AND role = 'admin'
-  ));
+   ON public.special_picks FOR SELECT
+   USING (auth.uid() = user_id OR public.has_role(auth.uid(), 'admin'));
 
 CREATE POLICY "Users can insert own special picks"
   ON public.special_picks FOR INSERT
@@ -128,10 +122,7 @@ CREATE POLICY "Anyone can view leaderboard"
 -- User roles: only admins can manage
 CREATE POLICY "Admins can manage roles"
   ON public.user_roles FOR ALL
-  USING (EXISTS (
-    SELECT 1 FROM public.user_roles
-    WHERE user_id = auth.uid() AND role = 'admin'
-  ));
+  USING (public.has_role(auth.uid(), 'admin'));
 
 -- Profiles: users can read all, update own
 CREATE POLICY "Anyone can view profiles"
