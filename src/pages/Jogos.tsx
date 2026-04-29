@@ -204,6 +204,19 @@ export default function Jogos() {
     const match = matches.find(m => m.id === matchId);
     if (match && isMatchLocked(match)) { showToast('Tempo esgotado!', 'error'); return; }
 
+    // Atualiza o estado local ANTES de qualquer coisa para garantir que aparece na tela
+    setUserPicks(prev => ({
+      ...prev,
+      [matchId]: {
+        match_id: matchId,
+        home_score: homeScore,
+        away_score: awayScore,
+        points: 0,
+        extra_time_winner: extraTimeWinner,
+        penalties_winner: penaltiesWinner
+      }
+    }));
+
     const { error } = await supabase
       .from('match_picks')
       .upsert({
@@ -218,20 +231,7 @@ export default function Jogos() {
     if (error) {
       showToast('Erro ao salvar palpite: ' + error.message, 'error');
     } else {
-      // Atualiza o estado local imediatamente para mostrar o palpite
-      setUserPicks(prev => ({
-        ...prev,
-        [matchId]: {
-          match_id: matchId,
-          home_score: homeScore,
-          away_score: awayScore,
-          points: 0,
-          extra_time_winner: extraTimeWinner,
-          penalties_winner: penaltiesWinner
-        }
-      }));
       showToast('Palpite salvo!', 'success');
-      fetchPicks();
     }
   };
 
