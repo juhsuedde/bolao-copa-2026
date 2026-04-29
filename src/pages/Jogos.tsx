@@ -316,8 +316,12 @@ export default function Jogos() {
                 {match.home?.name || match.home_team}
               </span>
               {match.home?.flag_url ? (
-                <img src={match.home.flag_url} alt={match.home.name} className="w-6 h-4 object-cover rounded-sm flex-shrink-0" style={{ border: '1px solid var(--border)', boxShadow: '0 1px 2px rgba(0,0,0,0.08)' }} />
-              ) : <span className="flex-shrink-0">⚽</span>}
+                  match.home.flag_url.startsWith('http') ? (
+                    <img src={match.home.flag_url} alt={match.home.name} className="w-6 h-4 object-cover rounded-sm flex-shrink-0" style={{ border: '1px solid var(--border)', boxShadow: '0 1px 2px rgba(0,0,0,0.08)' }} />
+                  ) : (
+                    <span className="text-lg flex-shrink-0">{match.home.flag_url}</span>
+                  )
+                ) : <span className="flex-shrink-0">⚽</span>}
             </div>
 
             <div className="px-3 flex-shrink-0">
@@ -334,8 +338,12 @@ export default function Jogos() {
 
             <div className="flex items-center gap-2.5 flex-1 min-w-0 justify-end">
               {match.away?.flag_url ? (
-                <img src={match.away.flag_url} alt={match.away.name} className="w-6 h-4 object-cover rounded-sm flex-shrink-0" style={{ border: '1px solid var(--border)', boxShadow: '0 1px 2px rgba(0,0,0,0.08)' }} />
-              ) : <span className="flex-shrink-0">⚽</span>}
+                  match.away.flag_url.startsWith('http') ? (
+                    <img src={match.away.flag_url} alt={match.away.name} className="w-6 h-4 object-cover rounded-sm flex-shrink-0" style={{ border: '1px solid var(--border)', boxShadow: '0 1px 2px rgba(0,0,0,0.08)' }} />
+                  ) : (
+                    <span className="text-lg flex-shrink-0">{match.away.flag_url}</span>
+                  )
+                ) : <span className="flex-shrink-0">⚽</span>}
               <span style={{ fontSize: '14px', fontWeight: 600 }} className="truncate text-right">
                 {match.away?.name || match.away_team}
               </span>
