@@ -87,7 +87,11 @@ VITE_USE_MOCK=true
 
 ## 📸 Screenshots
 
-_(Adicione aqui screenshots das principais telas: Home, Jogos, Ranking, Palpites)_
+<div align="center">
+  <img src="screenshots/IMG_1615-portrait.png" width="250" />
+  <img src="screenshots/IMG_1613-portrait.png" width="250" />
+  <img src="screenshots/IMG_1614-portrait.png" width="250" />
+</div>
 
 ---
 
